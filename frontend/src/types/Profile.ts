@@ -3,11 +3,11 @@ export type Profile = {
   employeeId: string
   employeeName: string
   profileSummary: string
-  keyStrengths: string
-  preferredWorkTypes: string
-  domainExperienceSummary: string
-  certifications: string
-  recentHighlights: string
+  keyStrengths: string[]
+  preferredWorkTypes: string[]
+  domainExperienceSummary: Record<string, string>
+  certifications: string[]
+  recentHighlights: string[]
   mobilityNotes: string
-  languages: string
+  languages: string[]
 }

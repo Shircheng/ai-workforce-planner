@@ -8,7 +8,7 @@ export type Bench = {
   benchFTE: number
   benchPercent: number
   primaryDomain: string
-  topSkills: string
+  topSkills: string[]
   benchRisk: string
   timeOnBenchDays: number
   suggestedAction: string

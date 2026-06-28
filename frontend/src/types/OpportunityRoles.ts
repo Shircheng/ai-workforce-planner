@@ -4,8 +4,8 @@ export type OpportunityRole = {
   roleName: string
   disciplineOrDepartment: string
   gradePreference: string
-  requiredSkills: string
-  desiredSkills: string
+  requiredSkills: string[]
+  desiredSkills: string[]
   domainExperienceRequired: string
   locationPreference: string
   startDate: string

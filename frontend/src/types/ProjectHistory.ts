@@ -9,9 +9,9 @@ export type ProjectHistory = {
   role: string
   startDate: string
   endDate: string
-  keyTechnologiesOrMethods: string
-  responsibilities: string
-  outcomeEvidence: string
+  keyTechnologiesOrMethods: string[]
+  responsibilities: string[]
+  outcomeEvidence: string[]
   region: string
   teamSize: number
 }
