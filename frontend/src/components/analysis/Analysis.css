@@ -1,0 +1,8 @@
+@import '/src/components/analysis/shared/AnalysisBase.css';
+@import '/src/components/analysis/shared/AnalysisControls.css';
+@import '/src/components/analysis/shared/AnalysisCards.css';
+@import '/src/components/analysis/shared/AnalysisPanels.css';
+@import '/src/components/analysis/skill-gap/SkillGap.css';
+@import '/src/components/analysis/workforce-forecast/WorkforceForecast.css';
+@import '/src/components/analysis/opportunity-forecast/OpportunityForecast.css';
+@import '/src/components/analysis/shared/AnalysisResponsive.css';

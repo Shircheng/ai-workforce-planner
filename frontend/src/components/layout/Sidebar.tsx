@@ -6,6 +6,7 @@ const navItems = [
   { label: 'Opportunity Intake', to: '/opportunities/new' },
   { label: 'Opportunity List', to: '/opportunities' },
   { label: 'Recommendations', to: '/opportunities/sample/recommendations' },
+  { label: 'Analysis', to: '/analysis' },
   { label: 'EWA Review', to: '/ewa/sample' },
 ]
 

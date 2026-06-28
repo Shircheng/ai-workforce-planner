@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
+import AnalysisPage from '../pages/AnalysisPage'
 import DashboardPage from '../pages/DashboardPage'
 import EwaReviewPackPage from '../pages/EwaReviewPackPage'
 import OpportunityIntakePage from '../pages/OpportunityIntakePage'
@@ -29,6 +30,7 @@ function AppRoutes() {
             path="/opportunities/:id/recommendations"
             element={<RecommendationPage />}
           />
+          <Route path="/analysis" element={<AnalysisPage />} />
           <Route path="/ewa/:id" element={<EwaReviewPackPage />} />
         </Route>
       </Routes>
