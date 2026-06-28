@@ -1,0 +1,5 @@
+export { default as AnalysisTabs } from './shared/AnalysisTabs'
+export type { AnalysisTab } from './shared/AnalysisTabs'
+export { default as SkillGapView } from './skill-gap/SkillGapView'
+export { default as WorkforceForecastView } from './workforce-forecast/WorkforceForecastView'
+export { default as OpportunityForecastView } from './opportunity-forecast/OpportunityForecastView'

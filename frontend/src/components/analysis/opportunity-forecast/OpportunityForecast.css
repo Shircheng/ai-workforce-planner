@@ -1,0 +1,131 @@
+.analysis-opportunity-command-bar {
+  grid-template-columns: minmax(150px, 0.35fr) minmax(240px, 1fr) auto;
+}
+
+.analysis-opportunity-summary {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.analysis-opportunity-visual-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.analysis-opportunity-visual-grid .analysis-panel {
+  padding: 18px;
+}
+
+.analysis-opportunity-visual-grid .analysis-chart {
+  height: 340px;
+}
+
+.analysis-opportunity-visual-grid .analysis-window-chart {
+  height: 220px;
+}
+
+.analysis-opportunity-visual-grid .analysis-skill-demand-donut {
+  position: relative;
+  height: 380px;
+}
+
+.analysis-window-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.analysis-window-skill-row {
+  min-width: min(260px, 100%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.analysis-window-skill-row strong {
+  flex: 0 0 auto;
+  color: #111827;
+}
+
+.analysis-window-skill-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-skill-demand-composition {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 22px;
+  align-items: center;
+}
+
+.analysis-donut-center {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 1;
+  display: flex;
+  min-width: 90px;
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.analysis-donut-center strong {
+  color: #111827;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.analysis-skill-demand-ranking {
+  display: grid;
+  gap: 10px;
+}
+
+.analysis-skill-rank-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+
+.analysis-skill-rank-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.analysis-skill-rank-row div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analysis-skill-rank-row strong {
+  color: #111827;
+  font-size: 13px;
+}
+
+.analysis-skill-rank-row span,
+.analysis-skill-rank-row em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}

@@ -1,0 +1,47 @@
+@media (max-width: 1100px) {
+  .analysis-command-bar {
+    grid-template-columns: 1fr 44px auto;
+  }
+
+  .analysis-skill-input {
+    grid-column: 1 / -1;
+  }
+
+  .analysis-filter-grid,
+  .analysis-overview,
+  .analysis-dashboard-grid,
+  .analysis-lower-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analysis-skill-demand-composition {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .analysis-command-bar,
+  .analysis-filter-grid,
+  .analysis-overview,
+  .analysis-dashboard-grid,
+  .analysis-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analysis-header-meta {
+    justify-content: flex-start;
+  }
+
+  .analysis-skill-input {
+    grid-column: auto;
+  }
+
+  .analysis-run-button {
+    width: 100%;
+  }
+}
