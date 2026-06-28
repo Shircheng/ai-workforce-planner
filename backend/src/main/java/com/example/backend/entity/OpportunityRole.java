@@ -1,30 +1,35 @@
 package com.example.backend.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "opportunity_roles")
 public class OpportunityRole {
 
     @Id
-    private String id;
+    private ObjectId id;
     private String opportunityRoleId;
     private String opportunityId;
     private String roleName;
     private String disciplineOrDepartment;
     private String gradePreference;
-    private String requiredSkills;
-    private String desiredSkills;
+    private List<String> requiredSkills;
+    private List<String> desiredSkills;
     private String domainExperienceRequired;
     private String locationPreference;
-    private String startDate;
+    private LocalDate startDate;
     private Integer durationWeeks;
     private BigDecimal fteRequired;
     private String priority;

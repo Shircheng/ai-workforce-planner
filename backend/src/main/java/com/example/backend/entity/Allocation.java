@@ -1,20 +1,24 @@
 package com.example.backend.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "allocations")
 public class Allocation {
 
     @Id
-    private String id;
+    private ObjectId id;
     private String allocationId;
     private String employeeId;
     private String employeeName;
@@ -26,9 +30,9 @@ public class Allocation {
     private String domain;
     private String roleOnProject;
     private BigDecimal allocationFTE;
-    private String startDate;
-    private String plannedEndDate;
+    private LocalDate startDate;
+    private LocalDate plannedEndDate;
     private String allocationStatus;
     private String ewaStatus;
-    private String lastUpdated;
+    private LocalDate lastUpdated;
 }
