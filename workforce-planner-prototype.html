@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InSync Talent Planner Prototype</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #667085;
+      --line: #d9dee7;
+      --brand: #0f766e;
+      --brand-2: #2563eb;
+      --warn: #b45309;
+      --risk: #b42318;
+      --good: #047857;
+      --soft: #edf7f5;
+      --blue-soft: #eff6ff;
+      --amber-soft: #fff7ed;
+      --red-soft: #fef3f2;
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+    }
+
+    aside {
+      background: #111827;
+      color: #e5e7eb;
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      padding: 0 8px;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #14b8a6, #2563eb);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: white;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .brand span {
+      color: #9ca3af;
+      font-size: 12px;
+    }
+
+    nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #cbd5e1;
+      text-align: left;
+      padding: 11px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .nav-btn.active,
+    .nav-btn:hover {
+      background: #243041;
+      color: #ffffff;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1500px;
+      width: 100%;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button,
+    .button {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-weight: 650;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+    }
+
+    .primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: white;
+    }
+
+    .blue {
+      background: var(--brand-2);
+      border-color: var(--brand-2);
+      color: white;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wide-left { grid-template-columns: minmax(0, 1.45fr) minmax(340px, .75fr); }
+
+    .panel,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .card {
+      padding: 15px;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 30px;
+      margin-top: 8px;
+    }
+
+    .trend {
+      font-size: 12px;
+      color: var(--good);
+      background: var(--soft);
+      padding: 5px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 13px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .track {
+      background: #eef2f7;
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--brand);
+    }
+
+    .fill.blue { background: var(--brand-2); }
+    .fill.amber { background: #d97706; }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+      min-width: 780px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      color: #475467;
+      font-size: 12px;
+      background: #f8fafc;
+      font-weight: 750;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      background: #eef2f7;
+      color: #344054;
+      white-space: nowrap;
+    }
+
+    .pill.good { background: var(--soft); color: var(--good); }
+    .pill.blue { background: var(--blue-soft); color: #1d4ed8; }
+    .pill.warn { background: var(--amber-soft); color: var(--warn); }
+    .pill.risk { background: var(--red-soft); color: var(--risk); }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 2fr repeat(4, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      font: inherit;
+      font-size: 13px;
+      background: white;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 148px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .person {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #e6fffb;
+      color: #0f766e;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 34px;
+      background: #eef2f7;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .allocation {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      border-radius: 6px;
+      background: #93c5fd;
+    }
+
+    .available {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      border-radius: 6px;
+      background: #5eead4;
+    }
+
+    .option {
+      display: grid;
+      gap: 12px;
+      border-top: 4px solid var(--brand);
+    }
+
+    .option:nth-child(2) { border-top-color: var(--brand-2); }
+    .option:nth-child(3) { border-top-color: #d97706; }
+
+    .score {
+      font-size: 32px;
+      font-weight: 850;
+    }
+
+    .score small {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .candidate {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: 160px repeat(3, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    .matrix > div {
+      padding: 11px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: white;
+    }
+
+    .matrix > div:nth-child(4n) {
+      border-right: 0;
+    }
+
+    .matrix .head {
+      background: #f8fafc;
+      font-weight: 800;
+    }
+
+    .review {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--brand);
+      background: var(--soft);
+      padding: 13px 14px;
+      border-radius: 6px;
+    }
+
+    .mobile-note {
+      display: none;
+    }
+
+    @media (max-width: 1050px) {
+      .shell { grid-template-columns: 1fr; }
+      aside {
+        position: static;
+        height: auto;
+      }
+      nav {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .cols-4,
+      .cols-3,
+      .cols-2,
+      .wide-left,
+      .review {
+        grid-template-columns: 1fr;
+      }
+      .filters {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      main { padding: 16px; }
+      nav { grid-template-columns: 1fr 1fr; }
+      .topbar { display: grid; }
+      .filters { grid-template-columns: 1fr; }
+      .matrix { grid-template-columns: 1fr; }
+      .matrix > div { border-right: 0; }
+      .mobile-note { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <div class="mark">IT</div>
+        <div>
+          <strong>InSync Talent Planner</strong>
+          <span>Workforce planning assistant</span>
+        </div>
+      </div>
+      <nav aria-label="Prototype pages">
+        <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+        <button class="nav-btn" data-page="talent">Talent Explorer</button>
+        <button class="nav-btn" data-page="profile">Person Profile</button>
+        <button class="nav-btn" data-page="opportunity">Opportunity Intake</button>
+        <button class="nav-btn" data-page="recommendations">Recommendations</button>
+        <button class="nav-btn" data-page="compare">Team Comparison</button>
+        <button class="nav-btn" data-page="forecast">Forecast</button>
+        <button class="nav-btn" data-page="ewa">EWA Review Pack</button>
+      </nav>
+    </aside>
+
+    <main>
+      <section id="dashboard" class="page active">
+        <div class="topbar">
+          <div>
+            <h1>Workforce Dashboard</h1>
+            <p class="subtitle">A consolidated view of bench, allocation, and upcoming supply across APAC, India, and MENA.</p>
+          </div>
+          <div class="actions">
+            <button>Import Dataset</button>
+            <button class="primary" data-jump="opportunity">New Opportunity</button>
+          </div>
+        </div>
+
+        <div class="grid cols-4">
+          <div class="card metric"><div><span>Total people</span><strong>500</strong></div><em class="trend">+42 profiles enriched</em></div>
+          <div class="card metric"><div><span>Available now</span><strong>68</strong></div><em class="trend">13.6% supply</em></div>
+          <div class="card metric"><div><span>Available in 30 days</span><strong>121</strong></div><em class="trend">+53 roll-offs</em></div>
+          <div class="card metric"><div><span>Open opportunities</span><strong>18</strong></div><em class="trend">7 urgent</em></div>
+        </div>
+
+        <div class="grid wide-left" style="margin-top:16px">
+          <div class="panel">
+            <h2>Availability Outlook</h2>
+            <div class="bar-list">
+              <div class="bar-row"><span>Now</span><div class="track"><div class="fill" style="width:34%"></div></div><strong>68</strong></div>
+              <div class="bar-row"><span>30 days</span><div class="track"><div class="fill" style="width:61%"></div></div><strong>121</strong></div>
+              <div class="bar-row"><span>60 days</span><div class="track"><div class="fill blue" style="width:76%"></div></div><strong>153</strong></div>
+              <div class="bar-row"><span>90 days</span><div class="track"><div class="fill amber" style="width:89%"></div></div><strong>178</strong></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Planning Alerts</h2>
+            <div class="grid">
+              <div class="callout">
+                <h3>Banking delivery demand rising</h3>
+                <p class="muted">React, Java, AWS, and QA Automation appear in 6 active opportunities.</p>
+              </div>
+              <div class="callout" style="border-left-color:#d97706;background:#fff7ed">
+                <h3>Senior QA gap</h3>
+                <p class="muted">Only 4 senior QA automation profiles are available within 30 days.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:16px">
+          <div class="panel">
+            <h2>Supply by Role</h2>
+            <div class="bar-list">
+              <div class="bar-row"><span>Backend</span><div class="track"><div class="fill" style="width:82%"></div></div><strong>84</strong></div>
+              <div class="bar-row"><span>Frontend</span><div class="track"><div class="fill blue" style="width:66%"></div></div><strong>67</strong></div>
+              <div class="bar-row"><span>QA</span><div class="track"><div class="fill amber" style="width:43%"></div></div><strong>44</strong></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Top Available Skills</h2>
+            <div class="pill-row">
+              <span class="pill good">Java 46</span><span class="pill good">React 39</span><span class="pill blue">AWS 31</span>
+              <span class="pill">Spring Boot 28</span><span class="pill">QA Automation 19</span><span class="pill">Data Engineering 17</span>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Regions</h2>
+            <div class="bar-list">
+              <div class="bar-row"><span>India</span><div class="track"><div class="fill" style="width:78%"></div></div><strong>92</strong></div>
+              <div class="bar-row"><span>APAC</span><div class="track"><div class="fill blue" style="width:48%"></div></div><strong>57</strong></div>
+              <div class="bar-row"><span>MENA</span><div class="track"><div class="fill amber" style="width:31%"></div></div><strong>37</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="talent" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Talent Explorer</h1>
+            <p class="subtitle">Search profiles by skill, role, grade, location, domain, and availability.</p>
+          </div>
+          <div class="actions">
+            <button>Save Filter</button>
+            <button class="primary" data-jump="recommendations">Recommend for Opportunity</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="filters">
+            <input value="React Java AWS banking" aria-label="Search" />
+            <select><option>Availability: 30 days</option></select>
+            <select><option>Region: All</option></select>
+            <select><option>Grade: Any</option></select>
+            <select><option>Status: Bench + roll-off</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Person</th><th>Role</th><th>Skills</th><th>Location</th><th>Availability</th><th>Domain</th><th>Fit</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="person"><div class="avatar">PS</div><div><strong>Priya Sharma</strong><br><span class="muted">Senior Consultant</span></div></div></td>
+                  <td>Frontend Engineer</td>
+                  <td><div class="pill-row"><span class="pill good">React</span><span class="pill">TypeScript</span><span class="pill blue">AWS</span></div></td>
+                  <td>Bengaluru</td>
+                  <td><span class="pill good">Available in 21 days</span></td>
+                  <td>Banking, Payments</td>
+                  <td><strong>91%</strong></td>
+                </tr>
+                <tr>
+                  <td><div class="person"><div class="avatar">AK</div><div><strong>Ahmed Khan</strong><br><span class="muted">Lead Engineer</span></div></div></td>
+                  <td>Backend Engineer</td>
+                  <td><div class="pill-row"><span class="pill good">Java</span><span class="pill good">Spring Boot</span><span class="pill blue">AWS</span></div></td>
+                  <td>Dubai</td>
+                  <td><span class="pill warn">Available in 35 days</span></td>
+                  <td>Banking, Insurance</td>
+                  <td><strong>87%</strong></td>
+                </tr>
+                <tr>
+                  <td><div class="person"><div class="avatar">SI</div><div><strong>Sara Iyer</strong><br><span class="muted">Consultant</span></div></div></td>
+                  <td>QA Automation</td>
+                  <td><div class="pill-row"><span class="pill good">Selenium</span><span class="pill">Cypress</span><span class="pill">API Testing</span></div></td>
+                  <td>Hyderabad</td>
+                  <td><span class="pill good">Available now</span></td>
+                  <td>Retail, Banking</td>
+                  <td><strong>84%</strong></td>
+                </tr>
+                <tr>
+                  <td><div class="person"><div class="avatar">DW</div><div><strong>Daniel Wong</strong><br><span class="muted">Delivery Manager</span></div></div></td>
+                  <td>Scrum Master</td>
+                  <td><div class="pill-row"><span class="pill good">Agile</span><span class="pill">Delivery</span><span class="pill">Risk</span></div></td>
+                  <td>Singapore</td>
+                  <td><span class="pill warn">Available in 42 days</span></td>
+                  <td>Banking, Telco</td>
+                  <td><strong>80%</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="profile" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Person Profile</h1>
+            <p class="subtitle">Evidence used by the recommendation engine for one candidate.</p>
+          </div>
+          <div class="actions">
+            <button>Open CV</button>
+            <button class="primary">Add to Option</button>
+          </div>
+        </div>
+
+        <div class="grid wide-left">
+          <div class="panel">
+            <div class="person" style="margin-bottom:18px">
+              <div class="avatar" style="width:58px;height:58px">PS</div>
+              <div>
+                <h2 style="margin-bottom:4px">Priya Sharma</h2>
+                <p class="subtitle">Senior Consultant | Frontend Engineer | Bengaluru</p>
+              </div>
+            </div>
+            <div class="grid cols-3">
+              <div class="card"><h3>Availability</h3><p><span class="pill good">Available in 21 days</span></p><p class="muted">Current project ends Jul 17, 2026.</p></div>
+              <div class="card"><h3>Primary Skills</h3><div class="pill-row"><span class="pill good">React</span><span class="pill">TypeScript</span><span class="pill blue">AWS</span></div></div>
+              <div class="card"><h3>Domains</h3><div class="pill-row"><span class="pill blue">Banking</span><span class="pill">Payments</span><span class="pill">Retail</span></div></div>
+            </div>
+
+            <div class="panel" style="margin-top:16px;padding:0;border:0">
+              <h2>Project Evidence</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Project</th><th>Client Domain</th><th>Role</th><th>Evidence</th></tr></thead>
+                  <tbody>
+                    <tr><td>Digital Payments Portal</td><td>Banking</td><td>Frontend Lead</td><td>React migration, design system, customer onboarding flow.</td></tr>
+                    <tr><td>Cloud Claims Platform</td><td>Insurance</td><td>Senior UI Engineer</td><td>AWS-hosted frontend, API integration, accessibility remediation.</td></tr>
+                    <tr><td>Retail Loyalty App</td><td>Retail</td><td>React Engineer</td><td>High-traffic dashboard and analytics widgets.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Recommendation Notes</h2>
+            <div class="grid">
+              <div class="card">
+                <h3>Why matched</h3>
+                <p class="muted">Strong React and TypeScript fit, banking experience, and availability inside the requested 30-day window.</p>
+              </div>
+              <div class="card">
+                <h3>Risks</h3>
+                <p class="muted">Availability depends on current project release confirmation. AWS experience is practical but not certification-backed.</p>
+              </div>
+              <div class="card">
+                <h3>Next action</h3>
+                <p class="muted">Ask EWA to confirm release date and check whether AWS certification is mandatory for the opportunity.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="opportunity" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Opportunity Intake</h1>
+            <p class="subtitle">Capture the staffing need in natural language, then review the structured requirement.</p>
+          </div>
+          <div class="actions">
+            <button>Clear</button>
+            <button class="primary" data-jump="recommendations">Generate Options</button>
+          </div>
+        </div>
+
+        <div class="grid wide-left">
+          <div class="panel">
+            <h2>Describe the Opportunity</h2>
+            <textarea>Need a 5-person team for a UK banking modernization project starting in 30 days. Required roles: React frontend engineer, Java Spring Boot backend engineer, QA automation, AWS engineer, and Scrum Master. Prefer banking or payments experience. Remote delivery from India, APAC, or MENA is acceptable.</textarea>
+            <div class="grid cols-3" style="margin-top:14px">
+              <label>Client Domain<input value="Banking modernization" /></label>
+              <label>Target Start Date<input value="2026-07-26" /></label>
+              <label>Team Size<input value="5" /></label>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Parsed Requirement</h2>
+            <div class="grid">
+              <div><h3>Roles</h3><div class="pill-row"><span class="pill">Frontend</span><span class="pill">Backend</span><span class="pill">QA</span><span class="pill">Cloud</span><span class="pill">Scrum Master</span></div></div>
+              <div><h3>Skills</h3><div class="pill-row"><span class="pill good">React</span><span class="pill good">Java</span><span class="pill">Spring Boot</span><span class="pill blue">AWS</span><span class="pill">QA Automation</span></div></div>
+              <div><h3>Constraints</h3><div class="pill-row"><span class="pill warn">Start in 30 days</span><span class="pill blue">Banking preferred</span><span class="pill">Remote delivery</span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="recommendations" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Recommendations</h1>
+            <p class="subtitle">Three evidence-backed staffing options generated from availability, skill coverage, grade, location, and domain experience.</p>
+          </div>
+          <div class="actions">
+            <button data-jump="compare">Compare Teams</button>
+            <button class="primary" data-jump="ewa">Prepare EWA Pack</button>
+          </div>
+        </div>
+
+        <div class="grid cols-3">
+          <div class="card option">
+            <div>
+              <h2>Option A: Best Skill Fit</h2>
+              <div class="score">88 <small>/ 100 confidence</small></div>
+              <p class="muted">Highest technical and domain coverage, with moderate release-date dependency.</p>
+            </div>
+            <div class="candidate"><div><strong>Priya Sharma</strong><br><span class="muted">React, TypeScript, AWS</span></div><span class="pill good">91%</span></div>
+            <div class="candidate"><div><strong>Ahmed Khan</strong><br><span class="muted">Java, Spring Boot, AWS</span></div><span class="pill good">87%</span></div>
+            <div class="candidate"><div><strong>Sara Iyer</strong><br><span class="muted">QA Automation, Cypress</span></div><span class="pill good">84%</span></div>
+            <div class="candidate"><div><strong>Daniel Wong</strong><br><span class="muted">Scrum, banking delivery</span></div><span class="pill warn">80%</span></div>
+            <div><h3>Risks</h3><p class="muted">Backend and Scrum Master availability require confirmation.</p></div>
+          </div>
+
+          <div class="card option">
+            <div>
+              <h2>Option B: Fastest Available</h2>
+              <div class="score">81 <small>/ 100 confidence</small></div>
+              <p class="muted">Ready fastest, but has a cloud capability gap that needs mitigation.</p>
+            </div>
+            <div class="candidate"><div><strong>Sara Iyer</strong><br><span class="muted">Available now</span></div><span class="pill good">84%</span></div>
+            <div class="candidate"><div><strong>Manoj Nair</strong><br><span class="muted">Java, API, available now</span></div><span class="pill good">82%</span></div>
+            <div class="candidate"><div><strong>Elaine Tan</strong><br><span class="muted">React, available in 12 days</span></div><span class="pill good">80%</span></div>
+            <div class="candidate"><div><strong>Ravi Menon</strong><br><span class="muted">Scrum Master</span></div><span class="pill good">78%</span></div>
+            <div><h3>Risks</h3><p class="muted">AWS coverage is partial. Add a cloud specialist or start targeted enablement.</p></div>
+          </div>
+
+          <div class="card option">
+            <div>
+              <h2>Option C: Balanced Low Risk</h2>
+              <div class="score">84 <small>/ 100 confidence</small></div>
+              <p class="muted">Balanced seniority, location coverage, and domain fit, with one later start.</p>
+            </div>
+            <div class="candidate"><div><strong>Priya Sharma</strong><br><span class="muted">Frontend, banking</span></div><span class="pill good">91%</span></div>
+            <div class="candidate"><div><strong>Noura Aziz</strong><br><span class="muted">AWS, DevOps</span></div><span class="pill good">86%</span></div>
+            <div class="candidate"><div><strong>Arjun Rao</strong><br><span class="muted">Java, payments</span></div><span class="pill warn">81%</span></div>
+            <div class="candidate"><div><strong>Sara Iyer</strong><br><span class="muted">QA Automation</span></div><span class="pill good">84%</span></div>
+            <div><h3>Risks</h3><p class="muted">Java developer becomes available at day 38, slightly outside the target window.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="compare" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Team Comparison</h1>
+            <p class="subtitle">Compare staffing options by readiness, skill coverage, domain evidence, and delivery risk.</p>
+          </div>
+          <div class="actions">
+            <button data-jump="recommendations">Back to Recommendations</button>
+            <button class="primary" data-jump="ewa">Select Option A</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="mobile-note muted">On narrow screens, the comparison matrix stacks for readability.</div>
+          <div class="matrix">
+            <div class="head">Criteria</div><div class="head">Option A</div><div class="head">Option B</div><div class="head">Option C</div>
+            <div>Readiness</div><div><span class="pill warn">Mostly ready in 35 days</span></div><div><span class="pill good">Ready in 21 days</span></div><div><span class="pill warn">Ready in 38 days</span></div>
+            <div>Skill coverage</div><div>React, Java, AWS, QA, Scrum covered</div><div>React, Java, QA, Scrum covered; AWS partial</div><div>React, Java, AWS, QA covered; Scrum partial</div>
+            <div>Domain evidence</div><div><span class="pill good">Strong banking</span></div><div><span class="pill warn">Mixed banking and retail</span></div><div><span class="pill good">Banking and payments</span></div>
+            <div>Location fit</div><div>India, Dubai, Singapore</div><div>India and APAC</div><div>India and MENA</div>
+            <div>Key risk</div><div>Release confirmation needed</div><div>AWS gap</div><div>Backend starts late</div>
+            <div>Recommended action</div><div>Send to EWA for release checks</div><div>Add cloud specialist</div><div>Negotiate phased onboarding</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="forecast" class="page">
+        <div class="topbar">
+          <div>
+            <h1>Forecast</h1>
+            <p class="subtitle">Upcoming workforce supply by role, region, and capability.</p>
+          </div>
+          <div class="actions">
+            <button>Export CSV</button>
+            <button class="primary">Refresh Forecast</button>
+          </div>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="panel">
+            <h2>30/60/90 Day Roll-Offs</h2>
+            <div class="timeline">
+              <div class="timeline-row"><strong>Frontend</strong><div class="timeline-track"><span class="available" style="left:10%;width:28%"></span><span class="available" style="left:52%;width:18%"></span></div></div>
+              <div class="timeline-row"><strong>Backend</strong><div class="timeline-track"><span class="available" style="left:18%;width:34%"></span><span class="available" style="left:67%;width:20%"></span></div></div>
+              <div class="timeline-row"><strong>QA</strong><div class="timeline-track"><span class="available" style="left:4%;width:18%"></span><span class="available" style="left:42%;width:14%"></span></div></div>
+              <div class="timeline-row"><strong>Cloud</strong><div class="timeline-track"><span class="available" style="left:28%;width:16%"></span><span class="available" style="left:71%;width:13%"></span></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Capability Gaps</h2>
+            <div class="bar-list">
+              <div class="bar-row"><span>AWS</span><div class="track"><div class="fill amber" style="width:42%"></div></div><strong>High</strong></div>
+              <div class="bar-row"><span>QA Auto</span><div class="track"><div class="fill amber" style="width:47%"></div></div><strong>Med</strong></div>
+              <div class="bar-row"><span>React</span><div class="track"><div class="fill" style="width:71%"></div></div><strong>Low</strong></div>
+              <div class="bar-row"><span>Java</span><div class="track"><div class="fill" style="width:79%"></div></div><strong>Low</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="ewa" class="page">
+        <div class="topbar">
+          <div>
+            <h1>EWA Review Pack</h1>
+            <p class="subtitle">A decision-ready summary for final human approval and booking.</p>
+          </div>
+          <div class="actions">
+            <button>Download PDF</button>
+            <button class="primary">Submit to EWA</button>
+          </div>
+        </div>
+
+        <div class="review">
+          <div class="panel">
+            <h2>Recommended Staffing Option</h2>
+            <p><strong>Opportunity:</strong> UK Banking Modernization Project</p>
+            <p><strong>Selected option:</strong> Option A - Best Skill Fit</p>
+            <p><strong>Target start:</strong> July 26, 2026</p>
+
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead><tr><th>Role</th><th>Recommended person</th><th>Match</th><th>Evidence</th></tr></thead>
+                <tbody>
+                  <tr><td>Frontend Engineer</td><td>Priya Sharma</td><td>91%</td><td>React, TypeScript, banking portal, available in 21 days.</td></tr>
+                  <tr><td>Backend Engineer</td><td>Ahmed Khan</td><td>87%</td><td>Java, Spring Boot, AWS, banking and insurance delivery.</td></tr>
+                  <tr><td>QA Automation</td><td>Sara Iyer</td><td>84%</td><td>Cypress, Selenium, API testing, available now.</td></tr>
+                  <tr><td>Scrum Master</td><td>Daniel Wong</td><td>80%</td><td>Banking delivery governance and risk management.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Approval Notes</h2>
+            <div class="grid">
+              <div class="card">
+                <h3>Confidence</h3>
+                <div class="score">88 <small>/ 100</small></div>
+              </div>
+              <div class="card">
+                <h3>Risks</h3>
+                <p class="muted">Confirm release dates for Ahmed Khan and Daniel Wong. Validate whether AWS certification is mandatory.</p>
+              </div>
+              <div class="card">
+                <h3>Next Actions</h3>
+                <p class="muted">EWA to confirm availability, check booking conflicts, and approve final staffing assignment.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const navButtons = Array.from(document.querySelectorAll("[data-page]"));
+    const pages = Array.from(document.querySelectorAll(".page"));
+
+    function showPage(id) {
+      pages.forEach(page => page.classList.toggle("active", page.id === id));
+      navButtons.forEach(button => button.classList.toggle("active", button.dataset.page === id));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    navButtons.forEach(button => {
+      button.addEventListener("click", () => showPage(button.dataset.page));
+    });
+
+    document.querySelectorAll("[data-jump]").forEach(button => {
+      button.addEventListener("click", () => showPage(button.dataset.jump));
+    });
+  </script>
+</body>
+</html>
