@@ -7,5 +7,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EmployeeRepository extends MongoRepository<Employee, String> {
+
     Optional<Employee> findByEmployeeId(String employeeId);
 }
