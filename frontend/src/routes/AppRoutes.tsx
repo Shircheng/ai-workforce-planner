@@ -36,6 +36,7 @@ function AppRoutes() {
             path="/opportunities/:id/recommendations"
             element={<RecommendationPage />}
           />
+          <Route path="/ewa" element={<EwaReviewPackPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
           <Route path="/ewa/:id" element={<EwaReviewPackPage />} />
         </Route>
