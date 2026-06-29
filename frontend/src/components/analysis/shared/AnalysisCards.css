@@ -1,0 +1,117 @@
+.analysis-overview {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.analysis-score-card,
+.analysis-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #dde1e7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 15px;
+}
+
+.analysis-score-card {
+  justify-content: space-between;
+}
+
+.analysis-score-card > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analysis-score-card > div:first-child,
+.analysis-kpi {
+  min-width: 0;
+}
+
+.analysis-score-card > div:first-child span,
+.analysis-kpi span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.analysis-kpi-label {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+}
+
+.analysis-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #64748b;
+  cursor: help;
+}
+
+.analysis-tooltip-text {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: min(280px, 72vw);
+  transform: translateX(-50%);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.4;
+  padding: 10px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.analysis-tooltip:hover .analysis-tooltip-text,
+.analysis-tooltip:focus-within .analysis-tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.analysis-score-card strong,
+.analysis-kpi strong {
+  color: #111827;
+  font-size: 28px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.analysis-kpi small {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.analysis-progress-track,
+.analysis-mini-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.analysis-progress-track {
+  height: 9px;
+}
+
+.analysis-mini-track {
+  width: 88px;
+  height: 6px;
+}
+
+.analysis-progress-track span,
+.analysis-mini-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #10b981;
+}
