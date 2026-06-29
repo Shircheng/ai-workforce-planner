@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProjectHistoryRepository extends MongoRepository<ProjectHistory, String> {
     List<ProjectHistory> findByEmployeeIdOrderByStartDateDesc(String employeeId);
+
+    List<ProjectHistory> findByEmployeeId(String employeeId);
 }

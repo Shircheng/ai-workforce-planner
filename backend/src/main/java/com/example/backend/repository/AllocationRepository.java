@@ -7,5 +7,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AllocationRepository extends MongoRepository<Allocation, String> {
+
+    List<Allocation> findByEmployeeId(String employeeId);
     List<Allocation> findByEmployeeIdOrderByStartDateDesc(String employeeId);
 }

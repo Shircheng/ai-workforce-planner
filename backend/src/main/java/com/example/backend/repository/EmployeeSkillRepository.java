@@ -9,6 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface EmployeeSkillRepository extends MongoRepository<EmployeeSkill, String> {
     List<EmployeeSkill> findByEmployeeId(String employeeId);
-
     List<EmployeeSkill> findByEmployeeIdIn(Collection<String> employeeIds);
 }

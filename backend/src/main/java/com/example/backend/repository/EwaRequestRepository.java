@@ -8,5 +8,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface EwaRequestRepository extends MongoRepository<EwaRequest, String> {
 
+    List<EwaRequest> findByOpportunityIdAndOpportunityRoleIdAndEmployeeId(
+            String opportunityId,
+            String opportunityRoleId,
+            String employeeId
+    );
+
     List<EwaRequest> findByEwaRequestIdStartingWith(String prefix);
 }
