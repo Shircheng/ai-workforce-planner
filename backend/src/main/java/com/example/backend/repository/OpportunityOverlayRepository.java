@@ -10,5 +10,11 @@ public interface OpportunityOverlayRepository extends MongoRepository<Opportunit
 
     List<OpportunityOverlay> findByOpportunityId(String opportunityId);
 
+    List<OpportunityOverlay> findByOpportunityIdAndOpportunityRoleIdAndEmployeeId(
+            String opportunityId,
+            String opportunityRoleId,
+            String employeeId
+    );
+
     void deleteByOpportunityId(String opportunityId);
 }

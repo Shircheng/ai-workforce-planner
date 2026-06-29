@@ -5,7 +5,7 @@ const navItems = [
   { label: 'Talent Explorer', to: '/talent' },
   { label: 'Opportunity Intake', to: '/opportunities/new' },
   { label: 'Opportunity List', to: '/opportunities' },
-  { label: 'Recommendations', to: '/opportunities/sample/recommendations' },
+  { label: 'Recommendations', to: '/opportunities/OPP-001/recommendations' },
   { label: 'EWA Review', to: '/ewa/sample' },
 ]
 

@@ -34,6 +34,11 @@ public class RecommendationRunController {
         return recommendationGenerationService.getRecommendationRun(recommendationRunId);
     }
 
+    @GetMapping("/opportunities/{opportunityId}/recommendations/latest")
+    public RecommendationRun getLatestRecommendationRunForOpportunity(@PathVariable String opportunityId) {
+        return recommendationGenerationService.getLatestRecommendationRunForOpportunity(opportunityId);
+    }
+
     @PatchMapping("/recommendation-runs/{recommendationRunId}/explanation")
     public RecommendationRun updateRecommendationExplanation(
             @PathVariable String recommendationRunId,
