@@ -143,6 +143,15 @@ public class EmployeeController {
         );
     }
 
+    @GetMapping("/{employeeId}")
+    public Employee getEmployee(@PathVariable String employeeId) {
+        return employeeRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Employee not found: " + employeeId
+                ));
+    }
+
     @GetMapping("/filter-options")
     public EmployeeFilterOptions getFilterOptions() throws IOException {
         seedDatasetIfEmpty();
