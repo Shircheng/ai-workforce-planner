@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import PageHeader from '../components/common/PageHeader'
 import AppLayout from '../components/layout/AppLayout'
 import DashboardPage from '../pages/DashboardPage'
 import EwaReviewPackPage from '../pages/EwaReviewPackPage'
@@ -25,6 +26,11 @@ function AppRoutes() {
             element={<OpportunityIntakePage />}
           />
           <Route path="/opportunities" element={<OpportunityListPage />} />
+          <Route
+            path="/team-comparison"
+            element={<PageHeader title="Team Comparison" />}
+          />
+          <Route path="/forecast" element={<PageHeader title="Forecast" />} />
           <Route
             path="/opportunities/:id/recommendations"
             element={<RecommendationPage />}
