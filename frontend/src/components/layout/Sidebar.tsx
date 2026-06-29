@@ -6,7 +6,7 @@ const navItems = [
   { label: 'Opportunity Intake', to: '/opportunities/new' },
   { label: 'Opportunity List', to: '/opportunities' },
   { label: 'Recommendations', to: '/opportunities/sample/recommendations' },
-  { label: 'EWA Review', to: '/ewa/sample' },
+  { label: 'EWA Review', to: '/ewa' },
 ]
 
 function Sidebar() {
