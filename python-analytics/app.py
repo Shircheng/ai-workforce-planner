@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -63,7 +64,83 @@ def text(value):
 
 
 def key(value):
-    return text(value).lower()
+    return text(value).casefold()
+
+
+SKILL_ALIASES = {
+    "ai": "AI",
+    "api": "API",
+    "apigee": "Apigee",
+    "aws": "AWS",
+    "azure": "Azure",
+    "ba": "Business Analysis",
+    "businessanalysis": "Business Analysis",
+    "c#": "C#",
+    "csharp": "C#",
+    "c++": "C++",
+    "cplusplus": "C++",
+    "css": "CSS",
+    "css3": "CSS",
+    "docker": "Docker",
+    "dotnet": ".NET",
+    "express": "Express.js",
+    "expressjs": "Express.js",
+    "figma": "Figma",
+    "gcp": "GCP",
+    "googlecloud": "GCP",
+    "graphql": "GraphQL",
+    "html": "HTML",
+    "html5": "HTML",
+    "java": "Java",
+    "javascript": "JavaScript",
+    "js": "JavaScript",
+    "kubernetes": "Kubernetes",
+    "k8s": "Kubernetes",
+    "mongodb": "MongoDB",
+    "mongo": "MongoDB",
+    "mysql": "MySQL",
+    "nestjs": "NestJS",
+    "nextjs": "Next.js",
+    "nodejs": "Node.js",
+    "node": "Node.js",
+    "openaiapi": "OpenAI API",
+    "postgres": "PostgreSQL",
+    "postgresql": "PostgreSQL",
+    "python": "Python",
+    "qaautomation": "QA Automation",
+    "react": "React",
+    "reactjs": "React",
+    "restapi": "REST API",
+    "spring": "Spring",
+    "springboot": "Spring Boot",
+    "sql": "SQL",
+    "tailwind": "Tailwind CSS",
+    "tailwindcss": "Tailwind CSS",
+    "typescript": "TypeScript",
+    "ts": "TypeScript",
+    "vue": "Vue.js",
+    "vuejs": "Vue.js",
+}
+
+
+def skill_alias_key(value):
+    normalized = text(value).casefold()
+    normalized = normalized.replace("&", "and")
+    normalized = normalized.replace("#", "sharp")
+    normalized = normalized.replace("+", "plus")
+    return re.sub(r"[^a-z0-9]+", "", normalized)
+
+
+def normalize_skill_name(value):
+    cleaned = text(value)
+    if not cleaned:
+        return ""
+    alias_key = skill_alias_key(cleaned)
+    return SKILL_ALIASES.get(alias_key, cleaned)
+
+
+def skill_key(value):
+    return skill_alias_key(normalize_skill_name(value))
 
 
 def split_list(value):
@@ -226,7 +303,7 @@ def build_skill_index(employee_ids):
     by_skill = defaultdict(set)
     for skill in skills:
         employee_id = skill.get("employeeId")
-        skill_name = key(skill.get("skillName"))
+        skill_name = skill_key(skill.get("skillName"))
         by_employee[employee_id].append(skill)
         by_skill[skill_name].add(employee_id)
     return skills, by_employee, by_skill
@@ -235,25 +312,25 @@ def build_skill_index(employee_ids):
 def build_skill_category_index(required_skills, employee_skills):
     categories = {}
     for item in db.skill_catalog.find({}):
-        skill_name = key(item.get("skillName"))
+        skill_name = skill_key(item.get("skillName"))
         skill_category = text(item.get("skillCategory"))
         if skill_name and skill_category:
             categories[skill_name] = skill_category
 
     for skill in employee_skills:
-        skill_name = key(skill.get("skillName"))
+        skill_name = skill_key(skill.get("skillName"))
         skill_category = text(skill.get("skillCategory"))
         if skill_name and skill_category and skill_name not in categories:
             categories[skill_name] = skill_category
 
     return {
-        key(skill_name): categories.get(key(skill_name), "Uncategorized")
+        skill_key(skill_name): categories.get(skill_key(skill_name), "Uncategorized")
         for skill_name in required_skills
     }
 
 
 def analyze_skill_gap(body):
-    required_skills = [text(skill) for skill in body.get("requiredSkills", []) if text(skill)]
+    required_skills = [normalize_skill_name(skill) for skill in body.get("requiredSkills", []) if text(skill)]
     min_skill_level = to_int(body.get("minSkillLevel"), 3)
     group_by = body.get("groupBy")
     filters = request_filters(body)
@@ -264,35 +341,35 @@ def analyze_skill_gap(body):
     skills, by_employee, _ = build_skill_index(employee_ids)
 
     total_employees = len(employees)
-    required_keys = [key(skill) for skill in required_skills]
+    required_keys = [skill_key(skill) for skill in required_skills]
     category_by_skill = build_skill_category_index(required_skills, skills)
     if skill_category_filter:
         required_pairs = [
-            (display_name, skill_key)
-            for display_name, skill_key in zip(required_skills, required_keys)
-            if matches_filter(category_by_skill.get(skill_key), skill_category_filter)
+            (display_name, required_key)
+            for display_name, required_key in zip(required_skills, required_keys)
+            if matches_filter(category_by_skill.get(required_key), skill_category_filter)
         ]
         required_skills = [display_name for display_name, _ in required_pairs]
-        required_keys = [skill_key for _, skill_key in required_pairs]
+        required_keys = [required_key for _, required_key in required_pairs]
     matched_by_skill = {skill: set() for skill in required_keys}
     matched_count_by_employee = Counter()
 
     for skill in skills:
-        skill_name = key(skill.get("skillName"))
+        skill_name = skill_key(skill.get("skillName"))
         employee_id = skill.get("employeeId")
         if skill_name in matched_by_skill and to_int(skill.get("skillLevel")) >= min_skill_level:
             matched_by_skill[skill_name].add(employee_id)
             matched_count_by_employee[employee_id] += 1
 
     skill_gaps = []
-    for display_name, skill_key in zip(required_skills, required_keys):
-        matched_count = len(matched_by_skill[skill_key])
+    for display_name, required_key in zip(required_skills, required_keys):
+        matched_count = len(matched_by_skill[required_key])
         missing_count = max(total_employees - matched_count, 0)
         coverage = round((matched_count / total_employees) * 100, 2) if total_employees else 0.0
         skill_gaps.append(
             {
                 "skillName": display_name,
-                "skillCategory": category_by_skill.get(skill_key, "Uncategorized"),
+                "skillCategory": category_by_skill.get(required_key, "Uncategorized"),
                 "matchedEmployeeCount": matched_count,
                 "missingEmployeeCount": missing_count,
                 "coveragePercentage": coverage,
@@ -340,14 +417,14 @@ def analyze_skill_gap(body):
                 }
             )
             group_employee_ids = {employee.get("employeeId") for employee in group_employees}
-            for display_name, skill_key in zip(required_skills, required_keys):
-                matched_count = len(matched_by_skill[skill_key] & group_employee_ids)
+            for display_name, required_key in zip(required_skills, required_keys):
+                matched_count = len(matched_by_skill[required_key] & group_employee_ids)
                 grouped_skill_coverage.append(
                     {
                         "groupBy": group_by,
                         "groupValue": value,
                         "skillName": display_name,
-                        "skillCategory": category_by_skill.get(skill_key, "Uncategorized"),
+                        "skillCategory": category_by_skill.get(required_key, "Uncategorized"),
                         "matchedEmployeeCount": matched_count,
                         "missingEmployeeCount": max(group_size - matched_count, 0),
                         "coveragePercentage": round((matched_count / group_size) * 100, 2)
@@ -520,7 +597,7 @@ def summarize_opportunity_window(rows, window_start, window_end):
         forecast_fte += weighted_fte
 
         for skill_name in opportunity_skill_names(role):
-            skill_demand[text(skill_name)] += weighted_fte
+            skill_demand[normalize_skill_name(skill_name)] += weighted_fte
 
     return {
         "requiredFte": round(required_fte, 2),
@@ -588,7 +665,7 @@ def analyze_opportunity_forecast(body):
         summary["forecastFte"] += weighted_fte
 
         for skill_name in opportunity_skill_names(role):
-            normalized_skill = text(skill_name)
+            normalized_skill = normalize_skill_name(skill_name)
             if not normalized_skill:
                 continue
             skill_required[normalized_skill] += role_fte
