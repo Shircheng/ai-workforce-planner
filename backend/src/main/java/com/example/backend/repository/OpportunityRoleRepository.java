@@ -16,6 +16,6 @@ public interface OpportunityRoleRepository extends MongoRepository<OpportunityRo
             String opportunityId,
             String opportunityRoleId
     );
-    
+
     List<OpportunityRole> findByOpportunityId(String opportunityId);
 }
