@@ -38,6 +38,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class EmployeeService {
 
+    private static final Set<String> ROLLING_OFF_RELEASE_WINDOWS = Set.of("030", "3160", "6190");
+
     private final EmployeeRepository employeeRepository;
     private final EmployeeSkillRepository employeeSkillRepository;
     private final BenchRepository benchRepository;
@@ -268,7 +270,7 @@ public class EmployeeService {
         return List.of(
                 new DashboardMetric("Total Workforce", totalEmployees, "Imported employees"),
                 new DashboardMetric("Available Now", availableCount, "Bench or current capacity"),
-                new DashboardMetric("Rolling Off", rollingOffCount, "Release dates tracked"),
+                new DashboardMetric("Rolling Off", rollingOffCount, "Release window 0-90 days"),
                 new DashboardMetric("Open Roles", openRoleCount, "Demand records")
         );
     }
@@ -379,7 +381,7 @@ public class EmployeeService {
         if (rollingOffCount > 0) {
             alerts.add(new DashboardAlert(
                     "Upcoming roll-offs",
-                    rollingOffCount + " people have release dates that can support near-term planning.",
+                    rollingOffCount + " people have roll-off release windows in the next 90 days.",
                     "info"
             ));
         }
@@ -790,9 +792,13 @@ public class EmployeeService {
     }
 
     private boolean isRollingOff(Employee employee) {
-        return employee.getExpectedReleaseDate() != null
-                || employee.getReleaseWindow() != null
-                || containsAny(employee.getAvailabilityCategory(), Set.of("roll", "release"));
+        String releaseWindow = normalize(employee.getReleaseWindow());
+        if (ROLLING_OFF_RELEASE_WINDOWS.contains(releaseWindow)) {
+            return true;
+        }
+
+        return releaseWindow.isBlank()
+                && containsAny(employee.getAvailabilityCategory(), Set.of("rollingoff"));
     }
 
     private double domainScore(Employee employee, String selectedDomain) {
