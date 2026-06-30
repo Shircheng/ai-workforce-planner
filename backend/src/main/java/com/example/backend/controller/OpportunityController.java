@@ -1,11 +1,16 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.Opportunity;
+import com.example.backend.entity.OpportunityRole;
 import com.example.backend.repository.OpportunityRepository;
+import com.example.backend.repository.OpportunityRoleRepository;
+import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.backend.dto.opportunity.OpportunityCommitRequest;
@@ -27,13 +32,16 @@ public class OpportunityController {
 
     private final OpportunityRepository opportunityRepository;
     private final OpportunityParsingService opportunityParsingService;
+    private final OpportunityRoleRepository opportunityRoleRepository;
 
     public OpportunityController(
         OpportunityRepository opportunityRepository,
-        OpportunityParsingService opportunityParsingService
+        OpportunityParsingService opportunityParsingService,
+            OpportunityRoleRepository opportunityRoleRepository
     ) {
         this.opportunityRepository = opportunityRepository;
         this.opportunityParsingService = opportunityParsingService;
+        this.opportunityRoleRepository = opportunityRoleRepository;
     }
 
     @GetMapping("/{opportunityId}")
@@ -63,5 +71,11 @@ public class OpportunityController {
                 ? "Unable to process the opportunity request."
                 : ex.getReason();
         return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", message));
+    }
+
+    @GetMapping("/{opportunityId}/roles")
+    @ResponseStatus(HttpStatus.OK)
+    public List<OpportunityRole> getOpportunityRoles(@PathVariable String opportunityId) {
+        return opportunityRoleRepository.findByOpportunityId(opportunityId);
     }
 }

@@ -366,17 +366,45 @@ function buildRecommendedPerson(candidate: EwaHydratedCandidate): EwaRecommended
     employeeId: candidate.employeeId,
     employeeName: candidate.employee?.employeeName ?? overlay?.employeeName ?? candidate.employeeId,
     role: role?.roleName,
-    matchScore: overlay?.matchScore,
-    capabilityFitScore: overlay?.capabilityFitScore ?? 0,
-    availabilityFitScore: overlay?.availabilityFitScore ?? 0,
-    overallStaffingScore: overlay?.overallStaffingScore ?? overlay?.matchScore ?? 0,
+    matchScore: overlay?.matchScore ?? candidate.matchScore,
+    capabilityFitScore: overlay?.capabilityFitScore ?? candidate.capabilityFitScore ?? 0,
+    availabilityFitScore: overlay?.availabilityFitScore ?? candidate.availabilityFitScore ?? 0,
+    overallStaffingScore:
+      overlay?.overallStaffingScore ??
+      overlay?.matchScore ??
+      candidate.overallStaffingScore ??
+      candidate.matchScore ??
+      0,
     availableFTEAtStart: candidate.availableFTEAtStart ?? overlay?.availableFTEAtStart ?? 0,
     fteGap: candidate.fteGap ?? overlay?.fteGap ?? 0,
-    requiredSkillsMatched: overlay?.requiredSkillsMatched ?? 0,
-    requiredSkillsTotal: overlay?.requiredSkillsTotal ?? role?.requiredSkills?.length ?? 0,
-    desiredSkillsMatched: overlay?.desiredSkillsMatched ?? 0,
-    desiredSkillsTotal: overlay?.desiredSkillsTotal ?? role?.desiredSkills?.length ?? 0,
+    requiredSkillsMatched:
+      overlay?.requiredSkillsMatched ??
+      candidate.requiredSkillsMatched ??
+      candidate.matchedRequiredSkills?.length ??
+      0,
+    requiredSkillsTotal:
+      overlay?.requiredSkillsTotal ??
+      candidate.requiredSkillsTotal ??
+      skillTotal(candidate.matchedRequiredSkills, candidate.missingRequiredSkills, role?.requiredSkills?.length),
+    desiredSkillsMatched:
+      overlay?.desiredSkillsMatched ??
+      candidate.desiredSkillsMatched ??
+      candidate.matchedDesiredSkills?.length ??
+      0,
+    desiredSkillsTotal:
+      overlay?.desiredSkillsTotal ??
+      candidate.desiredSkillsTotal ??
+      skillTotal(candidate.matchedDesiredSkills, candidate.missingDesiredSkills, role?.desiredSkills?.length),
   }
+}
+
+function skillTotal(
+  matched?: string[],
+  missing?: string[],
+  fallbackTotal?: number,
+) {
+  const total = (matched?.length ?? 0) + (missing?.length ?? 0)
+  return total > 0 ? total : fallbackTotal ?? 0
 }
 
 function average(values: Array<number | undefined>) {

@@ -7,5 +7,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AvailabilityRepository extends MongoRepository<Availability, String> {
+
+    List<Availability> findByEmployeeId(String employeeId);
     List<Availability> findByEmployeeIdOrderByWeekStartDateAsc(String employeeId);
 }
