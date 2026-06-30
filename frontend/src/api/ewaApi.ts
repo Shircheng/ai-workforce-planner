@@ -34,6 +34,13 @@ export type EwaTeamOptionSummary = {
   confidence?: number
   riskLevel?: string
   teamSize?: number
+  locationFitScore?: number
+  locationFit?: string[]
+  skillCoverageScore?: number
+  matchedRequiredSkills?: string[]
+  missingRequiredSkills?: string[]
+  matchedDesiredSkills?: string[]
+  missingDesiredSkills?: string[]
 }
 
 export type EwaRequestSnapshot = {
@@ -84,8 +91,23 @@ export type EwaSelectedCandidateReference = {
   opportunityId?: string
   opportunityRoleId: string
   employeeId: string
+  matchScore?: number
+  capabilityFitScore?: number
+  availabilityFitScore?: number
+  overallStaffingScore?: number
   availableFTEAtStart?: number
   fteGap?: number
+  locationFitScore?: number
+  locationFit?: string[]
+  skillCoverageScore?: number
+  requiredSkillsMatched?: number
+  requiredSkillsTotal?: number
+  desiredSkillsMatched?: number
+  desiredSkillsTotal?: number
+  matchedRequiredSkills?: string[]
+  missingRequiredSkills?: string[]
+  matchedDesiredSkills?: string[]
+  missingDesiredSkills?: string[]
 }
 
 export type EwaRecommendationSelectionPayload = {
@@ -158,6 +180,21 @@ export const ewaApi = {
     )
   },
 
+  getOpportunityOverlayForCandidate(
+    opportunityId: string,
+    opportunityRoleId: string,
+    employeeId: string,
+  ) {
+    const params = new URLSearchParams({
+      opportunityId,
+      opportunityRoleId,
+      employeeId,
+    })
+    return requestJson<OpportunityOverlay>(
+      `/api/opportunity-overlays/lookup?${params.toString()}`,
+    )
+  },
+
   getEmployee(employeeId: string) {
     return requestJson<Employee>(`/api/employees/${encodeURIComponent(employeeId)}`)
   },
@@ -179,9 +216,15 @@ export const ewaApi = {
       Promise.all(
         payload.selectedCandidates.map((candidate) => {
           const opportunityOverlayId = candidate.opportunityOverlayId ?? candidate.overlayId
-          return opportunityOverlayId
-            ? this.getOpportunityOverlay(opportunityOverlayId)
-            : Promise.resolve(undefined)
+          if (opportunityOverlayId) {
+            return this.getOpportunityOverlay(opportunityOverlayId).catch(() => undefined)
+          }
+          const candidateOpportunityId = candidate.opportunityId ?? payload.opportunityId
+          return this.getOpportunityOverlayForCandidate(
+            candidateOpportunityId,
+            candidate.opportunityRoleId,
+            candidate.employeeId,
+          ).catch(() => undefined)
         }),
       ),
     ])

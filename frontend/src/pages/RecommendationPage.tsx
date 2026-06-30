@@ -402,6 +402,10 @@ function buildEwaSelectionPayload(
           opportunityId,
           opportunityRoleId: member.opportunityRoleId as string,
           employeeId: member.employeeId as string,
+          matchScore: toNumber(member.matchScore) ?? undefined,
+          capabilityFitScore: toNumber(member.capabilityFitScore) ?? undefined,
+          availabilityFitScore: toNumber(member.availabilityFitScore) ?? undefined,
+          overallStaffingScore: toNumber(member.overallStaffingScore) ?? undefined,
           availableFTEAtStart: toNumber(member.availableFteAtStart) ?? undefined,
           fteGap: toNumber(member.fteGap) ?? undefined,
           locationFitScore: toNumber(member.locationFitScore) ?? undefined,
@@ -411,6 +415,14 @@ function buildEwaSelectionPayload(
           missingRequiredSkills: normalizedList(member.missingRequiredSkills),
           matchedDesiredSkills: normalizedList(member.matchedDesiredSkills),
           missingDesiredSkills: normalizedList(member.missingDesiredSkills),
+          requiredSkillsMatched: normalizedList(member.matchedRequiredSkills).length,
+          requiredSkillsTotal:
+            normalizedList(member.matchedRequiredSkills).length +
+            normalizedList(member.missingRequiredSkills).length,
+          desiredSkillsMatched: normalizedList(member.matchedDesiredSkills).length,
+          desiredSkillsTotal:
+            normalizedList(member.matchedDesiredSkills).length +
+            normalizedList(member.missingDesiredSkills).length,
         }
       }),
   }
