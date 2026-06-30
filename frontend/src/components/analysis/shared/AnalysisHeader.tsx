@@ -1,3 +1,5 @@
+import PageHeader from '../../common/PageHeader'
+
 type AnalysisHeaderProps = {
   eyebrow: string
   metaItems: string[]
@@ -8,7 +10,7 @@ function AnalysisHeader({ eyebrow, metaItems, title = 'Analysis' }: AnalysisHead
   return (
     <header className="analysis-header">
       <div>
-        <h1>{title}</h1>
+        <PageHeader title={title} />
         <span className="analysis-eyebrow">{eyebrow}</span>
       </div>
       {metaItems.length > 0 ? (

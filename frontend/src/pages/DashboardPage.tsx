@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { importApi } from '../api/importApi'
 import './DashboardPage.css'
+import PageHeader from '../components/common/PageHeader'
 import {
   employeeApi,
   type DashboardAlert,
@@ -148,7 +149,7 @@ function DashboardPage() {
         {toastMessage}
         <div className="dashboard-header">
           <div>
-            <h1>Workforce Dashboard</h1>
+            <PageHeader title="Workforce Dashboard" />
             <p>
               Import your workforce Excel dataset to populate dashboard metrics,
               availability, supply, skills, and planning alerts.
@@ -174,7 +175,7 @@ function DashboardPage() {
 
       <div className="dashboard-header">
         <div>
-          <h1>Workforce Dashboard</h1>
+          <PageHeader title="Workforce Dashboard" />
           <p>Load the workforce Excel dataset before exploring talent, analysis, and EWA flows.</p>
         </div>
         {importControl}
@@ -190,10 +191,10 @@ function DashboardPage() {
         <section className="rounded-lg border border-slate-300 bg-white p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-950">
+              <h2 className="text-xl font-bold text-slate-950">
                 Availability Outlook
               </h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
+              <p className="mt-1 text-base text-slate-500">
                 People available by release window
               </p>
             </div>
@@ -215,10 +216,10 @@ function DashboardPage() {
         <section className="rounded-lg border border-slate-300 bg-white p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-950">
+              <h2 className="text-xl font-bold text-slate-950">
                 Planning Alerts
               </h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
+              <p className="mt-1 text-base text-slate-500">
                 Signals generated from demand and supply
               </p>
             </div>
@@ -255,7 +256,7 @@ function DashboardPage() {
           items={dashboard.demandByDomain}
         />
         <section className="rounded-lg border border-slate-300 bg-white p-5">
-          <h2 className="text-xl font-extrabold text-slate-950">
+          <h2 className="text-xl font-bold text-slate-950">
             Executive Readout
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -276,8 +277,8 @@ function MetricCard({ metric, index }: { metric: DashboardMetric; index: number 
     <div className="rounded-lg border border-slate-300 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-500">{metric.label}</div>
-          <div className="mt-2 text-3xl font-extrabold text-slate-950">
+          <div className="text-base font-medium text-slate-500">{metric.label}</div>
+          <div className="mt-2 text-3xl font-bold text-slate-950">
             {metric.value.toLocaleString()}
           </div>
         </div>
@@ -285,7 +286,7 @@ function MetricCard({ metric, index }: { metric: DashboardMetric; index: number 
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <div className="mt-3 inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-extrabold text-teal-700">
+      <div className="mt-3 inline-flex rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-700">
         {metric.note}
       </div>
     </div>
@@ -304,12 +305,12 @@ function HorizontalBar({
   const width = maxValue === 0 ? 0 : Math.max((item.value / maxValue) * 100, 4)
 
   return (
-    <div className="grid grid-cols-[78px_1fr_56px] items-center gap-3">
-      <div className="text-sm font-semibold text-slate-600">{item.label}</div>
+    <div className="grid grid-cols-[minmax(92px,0.35fr)_1fr_64px] items-center gap-3">
+      <div className="text-base text-slate-700">{item.label}</div>
       <div className="h-3 overflow-hidden rounded-full bg-slate-100">
         <div className={`h-full rounded-full ${colorClass}`} style={{ width: `${width}%` }} />
       </div>
-      <div className="text-right text-sm font-extrabold text-slate-950">
+      <div className="text-right text-base font-bold text-slate-950">
         {item.value.toLocaleString()}
       </div>
     </div>
@@ -333,14 +334,14 @@ function CompactBarCard({
     <section className="rounded-lg border border-slate-300 bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-950">{title}</h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">{subtitle}</p>
+          <h2 className="text-xl font-bold text-slate-950">{title}</h2>
+          <p className="mt-1 text-base text-slate-500">{subtitle}</p>
         </div>
         {icon}
       </div>
       <div className="mt-5 space-y-3">
         {items.length === 0 ? (
-          <div className="rounded-lg bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+          <div className="rounded-lg bg-slate-50 px-4 py-6 text-center text-base font-medium text-slate-500">
             No data available.
           </div>
         ) : (
@@ -361,20 +362,20 @@ function CompactBarCard({
 function SkillCard({ items }: { items: DashboardBar[] }) {
   return (
     <section className="rounded-lg border border-slate-300 bg-white p-5">
-      <h2 className="text-xl font-extrabold text-slate-950">Top Available Skills</h2>
-      <p className="mt-1 text-sm font-semibold text-slate-500">
+      <h2 className="text-xl font-bold text-slate-950">Top Available Skills</h2>
+      <p className="mt-1 text-base text-slate-500">
         Most common skills across employee profiles
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
         {items.length === 0 ? (
-          <div className="rounded-lg bg-slate-50 px-4 py-6 text-sm font-semibold text-slate-500">
+          <div className="rounded-lg bg-slate-50 px-4 py-6 text-base font-medium text-slate-500">
             No skills available.
           </div>
         ) : (
           items.map((item, index) => (
             <span
               key={item.label}
-              className={`rounded-full px-3 py-1 text-sm font-semibold ${
+              className={`rounded-full px-3 py-1 text-base font-medium ${
                 index === 0
                   ? 'bg-teal-50 text-teal-700'
                   : 'bg-slate-100 text-slate-700'
@@ -399,8 +400,8 @@ function AlertCard({ alert }: { alert: DashboardAlert }) {
 
   return (
     <div className={`rounded-lg border-l-4 p-4 ${toneClass}`}>
-      <div className="text-sm font-extrabold text-slate-950">{alert.title}</div>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{alert.message}</p>
+      <div className="text-base font-bold text-slate-950">{alert.title}</div>
+      <p className="mt-2 text-base leading-6 text-slate-600">{alert.message}</p>
     </div>
   )
 }
@@ -408,10 +409,10 @@ function AlertCard({ alert }: { alert: DashboardAlert }) {
 function Readout({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-slate-50 p-4">
-      <div className="text-xs font-extrabold uppercase text-slate-500">
+      <div className="text-sm font-semibold uppercase text-slate-500">
         {label}
       </div>
-      <div className="mt-2 text-base font-extrabold text-slate-950">{value}</div>
+      <div className="mt-2 text-lg font-bold text-slate-950">{value}</div>
     </div>
   )
 }

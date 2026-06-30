@@ -1,25 +1,37 @@
-import { NavLink } from 'react-router-dom'
+import { UsersRound } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
   { label: 'Dashboard', to: '/' },
   { label: 'Talent Explorer', to: '/talent' },
   { label: 'Opportunity Intake', to: '/opportunities/new' },
-  { label: 'Recommendations', to: '/opportunities/sample/recommendations' },
+  { label: 'Recommendations', to: '/recommendations' },
   { label: 'Analysis', to: '/analysis' },
 ]
 
 function Sidebar() {
+  const location = useLocation()
+
   return (
     <aside className="sidebar">
-      <div className="sidebar-title">AI Workforce Planner</div>
+      <div className="sidebar-title">
+        <span className="sidebar-title-icon" aria-hidden="true">
+          <UsersRound size={19} />
+        </span>
+        <span>AI Workforce Planner</span>
+      </div>
       <nav className="sidebar-nav" aria-label="Primary navigation">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            end
+            end={item.to === '/'}
             className={({ isActive }) =>
-              isActive ? 'sidebar-link active' : 'sidebar-link'
+              isActive ||
+              (item.to === '/recommendations' &&
+                location.pathname.endsWith('/recommendations'))
+                ? 'sidebar-link active'
+                : 'sidebar-link'
             }
           >
             {item.label}

@@ -1,6 +1,7 @@
 import { FileCheck2, Layers3 } from 'lucide-react'
 import type { RefObject } from 'react'
 import type { RecommendationOption, RecommendationRun } from '../../types/Recommendation'
+import PageHeader from '../common/PageHeader'
 
 type RecommendationHeaderProps = {
   comparisonRef: RefObject<HTMLDivElement | null>
@@ -18,7 +19,7 @@ function RecommendationHeader({
   return (
     <div className="recommendation-topbar">
       <div>
-        <h1>Recommendations</h1>
+        <PageHeader title="Recommendations" />
         <p className="recommendation-subtitle">
           Evidence-backed staffing options generated from skill fit,
           availability, grade, location, domain, and project evidence.

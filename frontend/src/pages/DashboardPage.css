@@ -1,6 +1,7 @@
 .dashboard-page {
   min-height: calc(100vh - 128px);
   color: #071327;
+  font-size: 16px;
 }
 
 .dashboard-header {
@@ -11,17 +12,11 @@
   margin-bottom: 28px;
 }
 
-.dashboard-header h1 {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
 .dashboard-header p {
   max-width: 680px;
   margin: 8px 0 0;
   color: #526174;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.55;
 }
 
@@ -47,8 +42,8 @@
   background: #2563eb;
   color: #ffffff;
   padding: 0 18px;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
   transition:
     background 0.2s ease,
@@ -90,8 +85,8 @@
   background: #ffffff;
   padding: 12px 14px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .dashboard-toast-success {
@@ -122,7 +117,7 @@
   background: transparent;
   color: inherit;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .dashboard-toast button:hover {
@@ -150,14 +145,13 @@
   margin: 0;
   color: #071327;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
 .dashboard-empty-reminder p {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
   line-height: 1.6;
 }
 
