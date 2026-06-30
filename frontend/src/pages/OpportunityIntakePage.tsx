@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { UploadCloud } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { employeeApi, type WorkforceDashboardResponse } from '../api/employeeApi'
 import { opportunityApi, type OpportunityParseResponse, type OpportunityRequestPayload } from '../api/opportunityApi'
 import PageHeader from '../components/common/PageHeader'
 import OpportunityForm from '../components/opportunity/OpportunityForm'
@@ -12,6 +14,8 @@ type ToastState = {
   message: string
   tone: 'success' | 'warning'
 }
+
+type DatasetStatus = 'loading' | 'ready' | 'empty'
 
 const initialForm: OpportunityRequestPayload = {
   statement: '',
@@ -58,6 +62,20 @@ function formHasInput(form: OpportunityRequestPayload) {
   return Object.values(form).some((value) => String(value ?? '').trim().length > 0)
 }
 
+function hasDashboardData(dashboard: WorkforceDashboardResponse | null) {
+  if (!dashboard) return false
+
+  return [
+    dashboard.metrics,
+    dashboard.availabilityOutlook,
+    dashboard.supplyByRole,
+    dashboard.topSkills,
+    dashboard.regions,
+    dashboard.demandByDomain,
+    dashboard.alerts,
+  ].some((items) => items.length > 0)
+}
+
 function OpportunityIntakePage() {
   const navigate = useNavigate()
   const [form, setForm] = useState<OpportunityRequestPayload>(initialForm)
@@ -71,6 +89,7 @@ function OpportunityIntakePage() {
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false)
   const [recommendationOpportunityId, setRecommendationOpportunityId] = useState<string | null>(null)
   const [shouldGenerateOnRecommendationPage, setShouldGenerateOnRecommendationPage] = useState(false)
+  const [datasetStatus, setDatasetStatus] = useState<DatasetStatus>('loading')
   const pageTopRef = useRef<HTMLDivElement>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -83,6 +102,27 @@ function OpportunityIntakePage() {
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current)
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    employeeApi
+      .getDashboard()
+      .then((dashboard) => {
+        if (isMounted) {
+          setDatasetStatus(hasDashboardData(dashboard) ? 'ready' : 'empty')
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setDatasetStatus('empty')
+        }
+      })
+
+    return () => {
+      isMounted = false
     }
   }, [])
 
@@ -230,22 +270,40 @@ function OpportunityIntakePage() {
     <div className="opportunity-intake-page" ref={pageTopRef}>
       {toast && <div className={`toast-message ${toast.tone}`} role="status">{toast.message}</div>}
       <PageHeader title="Opportunity Intake" />
-      <section className="opportunity-intake-layout">
-        <OpportunityForm
-          form={form}
-          errors={fieldErrors}
-          isSubmitting={isParsing}
-          onChange={handleFormChange}
-          onSubmit={handleParse}
-        />
-        <ParsedRequirementPanel
-          result={result}
-          error={error}
-          isGenerating={isGenerating}
-          isParsing={isParsing}
-          onGenerateOptions={handleGenerateOptions}
-        />
-      </section>
+      {datasetStatus === 'loading' ? (
+        <section className="opportunity-dataset-state">
+          <p>Checking workforce dataset...</p>
+        </section>
+      ) : datasetStatus === 'empty' ? (
+        <section className="opportunity-dataset-state">
+          <UploadCloud aria-hidden="true" />
+          <h2>Import your workforce Excel dataset from the Dashboard</h2>
+          <p>
+            Load the workforce dataset before creating opportunities so parsed roles,
+            skills, availability, and recommendations can use the latest people data.
+          </p>
+          <button className="primary-button" type="button" onClick={() => navigate('/')}>
+            Go to Dashboard
+          </button>
+        </section>
+      ) : (
+        <section className="opportunity-intake-layout">
+          <OpportunityForm
+            form={form}
+            errors={fieldErrors}
+            isSubmitting={isParsing}
+            onChange={handleFormChange}
+            onSubmit={handleParse}
+          />
+          <ParsedRequirementPanel
+            result={result}
+            error={error}
+            isGenerating={isGenerating}
+            isParsing={isParsing}
+            onGenerateOptions={handleGenerateOptions}
+          />
+        </section>
+      )}
 
       {isGenerateConfirmOpen && (
         <div className="confirm-dialog-backdrop" role="presentation" onMouseDown={closeGenerateConfirm}>

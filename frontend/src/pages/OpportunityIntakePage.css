@@ -137,3 +137,54 @@
     width: 100%;
   }
 }
+
+.opportunity-dataset-state {
+  background: #ffffff;
+  border: 1px dashed #bfd0e8;
+  border-radius: 8px;
+  color: #334155;
+  max-width: 560px;
+  padding: 30px;
+}
+
+.opportunity-dataset-state svg {
+  color: #2563eb;
+  height: 32px;
+  width: 32px;
+}
+
+.opportunity-dataset-state h2 {
+  color: #071327;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 18px 0 0;
+}
+
+.opportunity-dataset-state p {
+  color: #41516a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+  margin: 12px 0 0;
+  max-width: 440px;
+}
+
+.opportunity-dataset-state .primary-button {
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 18px;
+  min-height: 40px;
+  padding: 10px 14px;
+}
+
+.opportunity-dataset-state .primary-button:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
