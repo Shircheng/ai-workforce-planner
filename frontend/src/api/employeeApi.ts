@@ -28,12 +28,13 @@ export type TalentFilters = {
   availability: string
   region: string
   grade: string
-  status: string
+  domain: string
 }
 
 export type EmployeeFilterOptions = {
   grades: string[]
   regions: string[]
+  domains: string[]
 }
 
 export type WorkforceDashboardResponse = {
@@ -193,7 +194,7 @@ export const employeeApi = {
         availability: filters.availability,
         region: filters.region,
         grade: filters.grade,
-        status: filters.status,
+        domain: filters.domain,
       },
     })
   },
