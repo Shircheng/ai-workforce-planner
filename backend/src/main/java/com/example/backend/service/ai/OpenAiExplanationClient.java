@@ -34,7 +34,7 @@ public class OpenAiExplanationClient {
     public OpenAiExplanationClient(
             Environment environment,
             @Value("${ai.openai.enabled:true}") boolean enabled,
-            @Value("${ai.openai.model:gpt-4.1-mini}") String model,
+            @Value("${openai.model:gpt-5.4-mini}") String model,
             @Value("${ai.openai.timeout-seconds:20}") long timeoutSeconds
     ) {
         this(
@@ -118,6 +118,10 @@ public class OpenAiExplanationClient {
     }
 
     private static String resolveModel(Environment environment, String configuredModel) {
+        String sharedConfiguredModel = environment == null ? null : environment.getProperty("openai.model");
+        if (StringUtils.hasText(sharedConfiguredModel)) {
+            return sharedConfiguredModel.trim();
+        }
         String environmentValue = environment == null ? null : environment.getProperty("OPENAI_MODEL");
         if (StringUtils.hasText(environmentValue)) {
             return environmentValue.trim();
@@ -134,7 +138,11 @@ public class OpenAiExplanationClient {
     }
 
     private static String resolveApiKey(Environment environment) {
-        String value = environment == null ? null : environment.getProperty("OPENAI_API_KEY");
+        String value = environment == null ? null : environment.getProperty("openai.api-key");
+        if (StringUtils.hasText(value)) {
+            return value.trim();
+        }
+        value = environment == null ? null : environment.getProperty("OPENAI_API_KEY");
         if (StringUtils.hasText(value)) {
             return value.trim();
         }
