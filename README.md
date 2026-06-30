@@ -1,6 +1,6 @@
-# AI-Workforce-Planner
+# AI Workforce Planner
 
-AI-Workforce-Planner is an AI-assisted workforce planning application built for the InSync Hackathon.
+AI Workforce Planner is an AI-assisted workforce planning application built for the InSync Hackathon.
 
 The application helps workforce planners, sales leaders, and delivery leaders explore available talent, create staffing opportunities, generate evidence-backed team recommendations, compare staffing options, and prepare final recommendations for EWA review.
 
