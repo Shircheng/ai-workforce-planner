@@ -4,10 +4,10 @@ import type { Opportunity } from '../types/Opportunity'
 import type { OpportunityOverlay } from '../types/OpportunityOverlays'
 import type { OpportunityRole } from '../types/OpportunityRoles'
 
-const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE ?? ''
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
 const apiClient = axios.create({
-  baseURL: BACKEND_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
