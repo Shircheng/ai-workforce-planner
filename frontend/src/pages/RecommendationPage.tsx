@@ -16,6 +16,7 @@ import {
 import type { ReactNode, RefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import type { EwaRecommendationSelectionPayload } from '../api/ewaApi'
 import { recommendationApi } from '../api/recommendationApi'
 import './RecommandationPage.css'
 import type { Opportunity } from '../types/Opportunity'
@@ -33,6 +34,11 @@ import type {
 type SelectedMember = {
   option: RecommendationOption
   member: RecommendationRunMember
+}
+
+type MemberWithOverlayReference = RecommendationRunMember & {
+  opportunityOverlayId?: string
+  overlayId?: string
 }
 
 const optionOrder = [
@@ -85,7 +91,6 @@ function RecommendationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isExplaining, setIsExplaining] = useState(false)
-  const [isPreparingEwa, setIsPreparingEwa] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [ewaMessage, setEwaMessage] = useState<string | null>(null)
@@ -243,28 +248,31 @@ function RecommendationPage() {
     }
   }
 
-  async function handlePrepareEwaPack() {
-    if (!recommendationRun?.recommendationRunId || !selectedOption?.optionType) {
+  function handlePrepareEwaPack() {
+    if (!recommendationRun?.recommendationRunId || !selectedOption) {
       setEwaMessage('Select a recommendation option before preparing EWA.')
       return
     }
 
-    setIsPreparingEwa(true)
-    setEwaMessage(null)
+    const selectedOptionIndex = Math.max(
+      options.findIndex(
+        (option) => option.optionType === selectedOption.optionType,
+      ),
+      0,
+    )
+    const payload = buildEwaSelectionPayload(
+      recommendationRun.opportunityId ?? opportunityId,
+      selectedOption,
+      selectedOptionIndex,
+    )
 
-    try {
-      await recommendationApi.prepareEwaReviewPack(
-        recommendationRun.recommendationRunId,
-        selectedOption.optionType,
-      )
-      setEwaMessage('EWA review pack prepared for the selected option.')
-    } catch {
-      setEwaMessage(
-        'EWA review pack is ready to prepare. EWA remains the final approval and booking process.',
-      )
-    } finally {
-      setIsPreparingEwa(false)
+    if (!payload.selectedCandidates.length) {
+      setEwaMessage('Selected option has no candidate data for EWA.')
+      return
     }
+
+    setEwaMessage(null)
+    navigate('/ewa', { state: payload })
   }
 
   if (isLoading) {
@@ -302,15 +310,11 @@ function RecommendationPage() {
           </button>
           <button
             className="primary-button"
-            disabled={!selectedOption || isPreparingEwa}
+            disabled={!selectedOption}
             onClick={handlePrepareEwaPack}
             type="button"
           >
-            {isPreparingEwa ? (
-              <Loader2 className="spin" size={16} />
-            ) : (
-              <FileCheck2 size={16} />
-            )}
+            <FileCheck2 size={16} />
             Prepare EWA Pack
           </button>
         </div>
@@ -323,12 +327,39 @@ function RecommendationPage() {
       ) : null}
 
       <OpportunitySummaryStrip
-        explanationStatus={recommendationRun?.explanationStatus}
         opportunity={opportunity}
         recommendationRun={recommendationRun}
         roleCount={roleCount}
         totalFte={totalFte}
       />
+
+      {recommendationRun && !hasExplanation ? (
+        <div className="ai-explanation-cta">
+          <div className="ai-explanation-cta-icon">
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <strong>AI explanation not generated yet</strong>
+            <p>
+              Generate team and member explanations from this stored
+              recommendation run. Backend scores and ranking will not change.
+            </p>
+          </div>
+          <button
+            className="secondary-button ai-explanation-button"
+            disabled={isExplaining}
+            onClick={handleGenerateExplanation}
+            type="button"
+          >
+            {isExplaining ? (
+              <Loader2 className="spin" size={16} />
+            ) : (
+              <Sparkles size={16} />
+            )}
+            Generate AI Explanation
+          </button>
+        </div>
+      ) : null}
 
       {!recommendationRun ? (
         <EmptyRecommendationState
@@ -338,48 +369,6 @@ function RecommendationPage() {
         />
       ) : (
         <>
-          <div className="run-toolbar">
-            <div>
-              <span className="eyebrow">Recommendation run</span>
-              <strong>{recommendationRun.recommendationRunId}</strong>
-              <span>{formatDateTime(recommendationRun.generatedAt)}</span>
-            </div>
-          </div>
-
-          {explanation?.explanations?.runSummary ? (
-            <div className="run-summary">
-              <Sparkles size={18} />
-              <div>
-                <strong>AI run summary</strong>
-                <p>{explanation.explanations.runSummary}</p>
-              </div>
-            </div>
-          ) : !hasExplanation ? (
-            <div className="ai-explanation-empty">
-              <Sparkles size={18} />
-              <div>
-                <strong>AI explanation not generated yet.</strong>
-                <p>
-                  Generate a concise explanation from this stored recommendation
-                  run. The backend scoring and ranking will not change.
-                </p>
-              </div>
-              <button
-                className="secondary-button ai-inline-button"
-                disabled={isExplaining}
-                onClick={handleGenerateExplanation}
-                type="button"
-              >
-                {isExplaining ? (
-                  <Loader2 className="spin" size={16} />
-                ) : (
-                  <Sparkles size={16} />
-                )}
-                Generate AI Explanation
-              </button>
-            </div>
-          ) : null}
-
           <div className="option-grid">
             {options.map((option, index) => (
               <TeamOptionCard
@@ -398,6 +387,8 @@ function RecommendationPage() {
 
           <TeamComparisonTable
             explanation={explanation}
+            isExplaining={isExplaining}
+            onGenerateExplanation={handleGenerateExplanation}
             options={options}
             refNode={comparisonRef}
           />
@@ -411,8 +402,10 @@ function RecommendationPage() {
             selectedMember.option,
             selectedMember.member,
           )}
+          isExplaining={isExplaining}
           member={selectedMember.member}
           onClose={() => setSelectedMember(null)}
+          onGenerateExplanation={handleGenerateExplanation}
           option={selectedMember.option}
         />
       ) : null}
@@ -423,7 +416,6 @@ function RecommendationPage() {
 type OpportunitySummaryStripProps = {
   opportunity: Opportunity | null
   recommendationRun: RecommendationRun | null
-  explanationStatus?: string
   roleCount: number
   totalFte: number
 }
@@ -431,7 +423,6 @@ type OpportunitySummaryStripProps = {
 function OpportunitySummaryStrip({
   opportunity,
   recommendationRun,
-  explanationStatus,
   roleCount,
   totalFte,
 }: OpportunitySummaryStripProps) {
@@ -485,10 +476,6 @@ function OpportunitySummaryStrip({
         label="Total FTE"
         value={totalFte ? formatNumber(totalFte) : notAvailable}
       />
-      <div className="summary-status">
-        <span>EWA / AI Status</span>
-        <StatusBadge status={explanationStatus} />
-      </div>
     </div>
   )
 }
@@ -583,29 +570,26 @@ function TeamOptionCard({
         <div className="option-card-header">
           <div>
             <h2>{config.label}</h2>
-            <span>{option.optionType ?? 'Backend option'}</span>
           </div>
           {isSelected ? (
             <span className="selected-pill">
-              <CheckCircle2 size={13} />
-              Selected
+              <CheckCircle2 size={16} />
+              Selected Option
             </span>
           ) : null}
         </div>
 
         <div className="score-row">
-          <div>
+          <div className="score-main">
             <strong>{formatScore(confidenceScore)}</strong>
             <span>/100</span>
+            <small>Confidence</small>
           </div>
-          <RiskBadge riskLevel={option.riskLevel} />
+          <div className="risk-summary">
+            <small>Risk</small>
+            <RiskBadge riskLevel={option.riskLevel} />
+          </div>
         </div>
-
-        <p className="option-summary">
-          {explanation?.teamSummary ??
-            firstText(option.risks) ??
-            'Backend-generated recommendation option. Generate AI explanation for a concise team summary.'}
-        </p>
 
         <div className="option-stats">
           <StatPill label="Readiness" value={readinessText(option)} />
@@ -635,14 +619,9 @@ function TeamOptionCard({
                 <span className="avatar">{initials(member.employeeName)}</span>
                 <span>
                   <strong>{member.employeeName ?? 'Unnamed employee'}</strong>
-                  <small>{member.roleName ?? notAvailable}</small>
-                  <em>
-                    {member.fitStatus ?? 'Fit status unavailable'} · Cap{' '}
-                    {formatScore(
-                      toNumber(member.capabilityFitScore ?? member.matchScore),
-                    )}{' '}
-                    · Avail {formatScore(toNumber(member.availabilityFitScore))}
-                  </em>
+                  <small className="member-role-pill">
+                    {member.roleName ?? notAvailable}
+                  </small>
                 </span>
               </span>
               <span>{availabilityText(member)}</span>
@@ -656,13 +635,7 @@ function TeamOptionCard({
           ))}
         </div>
 
-        <div className="risk-box">
-          <ShieldCheck size={18} />
-          <div>
-            <strong>Risks / Gaps</strong>
-            <p>{explanation?.riskSummary ?? risksText(option)}</p>
-          </div>
-        </div>
+        <TeamRiskSummary explanation={explanation} option={option} />
       </div>
     </article>
   )
@@ -688,15 +661,51 @@ function ScoreChip({
   return <span className={`score-chip ${tone}`}>{formatScore(score)}</span>
 }
 
+function TeamRiskSummary({
+  explanation,
+  option,
+}: {
+  explanation?: OptionExplanation
+  option: RecommendationOption
+}) {
+  const items = teamRiskItems(option, explanation)
+  const hasRisks = items.length > 0
+
+  return (
+    <div className={`risk-box ${hasRisks ? 'warn' : 'clear'}`}>
+      <ShieldCheck size={18} />
+      <div className="risk-box-content">
+        <div className="risk-box-heading">
+          <strong>Risks / Gaps</strong>
+        </div>
+        {hasRisks ? (
+          <ul className="risk-box-list">
+            {items.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="risk-box-empty">No risks supplied by the backend run.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function TeamComparisonTable({
   explanation,
+  isExplaining,
+  onGenerateExplanation,
   options,
   refNode,
 }: {
   explanation: RecommendationExplanationResponse | null
+  isExplaining: boolean
+  onGenerateExplanation: () => void
   options: RecommendationOption[]
   refNode: RefObject<HTMLDivElement | null>
 }) {
+  const hasExplanation = Boolean(explanation?.explanations)
   const rows = [
     {
       description: 'Backend confidence for this option.',
@@ -728,11 +737,7 @@ function TeamComparisonTable({
       icon: <Clock3 size={15} />,
       label: 'Readiness days',
       render: (option: RecommendationOption) => (
-        <ComparisonMetric
-          label="Readiness"
-          tone={option.readinessDays === 0 ? 'strong' : 'medium'}
-          value={readinessText(option)}
-        />
+        <ComparisonReadinessPill option={option} />
       ),
     },
     {
@@ -782,6 +787,7 @@ function TeamComparisonTable({
     {
       description: 'Generated only by the AI explanation endpoint.',
       icon: <Sparkles size={15} />,
+      isAiNextActions: true,
       label: 'AI next actions',
       render: (option: RecommendationOption) => (
         <ComparisonBulletList
@@ -789,17 +795,6 @@ function TeamComparisonTable({
           items={nextActionItems(findOptionExplanation(explanation, option))}
           tone="action"
         />
-      ),
-    },
-    {
-      description: 'EWA remains the final approval and booking process.',
-      icon: <FileCheck2 size={15} />,
-      label: 'EWA readiness',
-      render: (option: RecommendationOption) => (
-        <div className="comparison-ewa-note">
-          {findOptionExplanation(explanation, option)?.ewaSummary ??
-            'EWA remains the final approval and booking process.'}
-        </div>
       ),
     },
   ]
@@ -826,27 +821,75 @@ function TeamComparisonTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.label}>
-                <td>
-                  <div className="comparison-criteria">
-                    <span className="comparison-criteria-icon">{row.icon}</span>
-                    <span>
-                      <strong>{row.label}</strong>
-                      <small>{row.description}</small>
-                    </span>
-                  </div>
-                </td>
-                {options.map((option, index) => (
-                  <td key={`${row.label}-${option.optionType ?? index}`}>
-                    {row.render(option)}
+            {rows.map((row) => {
+              const mergeAiActionColumns = row.isAiNextActions && !hasExplanation
+
+              return (
+                <tr key={row.label}>
+                  <td>
+                    <div className="comparison-criteria">
+                      <span className="comparison-criteria-icon">{row.icon}</span>
+                      <span>
+                        <strong>{row.label}</strong>
+                        <small>{row.description}</small>
+                      </span>
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {mergeAiActionColumns ? (
+                    <td colSpan={Math.max(options.length, 1)}>
+                      <GenerateAiExplanationPanel
+                        compact
+                        disabled={isExplaining}
+                        onGenerate={onGenerateExplanation}
+                      />
+                    </td>
+                  ) : (
+                    options.map((option, index) => (
+                      <td key={`${row.label}-${option.optionType ?? index}`}>
+                        {row.render(option)}
+                      </td>
+                    ))
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function GenerateAiExplanationPanel({
+  compact = false,
+  disabled,
+  onGenerate,
+}: {
+  compact?: boolean
+  disabled: boolean
+  onGenerate: () => void
+}) {
+  return (
+    <div className={`generate-ai-panel ${compact ? 'compact' : ''}`}>
+      <div className="generate-ai-icon">
+        <Sparkles size={compact ? 16 : 18} />
+      </div>
+      <div className="generate-ai-copy">
+        <strong>AI explanation not generated yet</strong>
+        <p>
+          Generate AI explanations from the stored recommendation run. Backend
+          scores and ranking will not change.
+        </p>
+      </div>
+      <button
+        className="secondary-button ai-explanation-button"
+        disabled={disabled}
+        onClick={onGenerate}
+        type="button"
+      >
+        {disabled ? <Loader2 className="spin" size={16} /> : <Sparkles size={16} />}
+        Generate AI Explanation
+      </button>
     </div>
   )
 }
@@ -887,6 +930,16 @@ function ComparisonMetric({
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
+  )
+}
+
+function ComparisonReadinessPill({ option }: { option: RecommendationOption }) {
+  const readiness = readinessPill(option)
+
+  return (
+    <span className={`readiness-pill ${readiness.tone}`}>
+      {readiness.label}
+    </span>
   )
 }
 
@@ -957,13 +1010,17 @@ function ComparisonBulletList({
 
 function PersonDetailDrawer({
   explanation,
+  isExplaining,
   member,
   onClose,
+  onGenerateExplanation,
   option,
 }: {
   explanation?: MemberExplanation
+  isExplaining: boolean
   member: RecommendationRunMember
   onClose: () => void
+  onGenerateExplanation: () => void
   option: RecommendationOption
 }) {
   return (
@@ -983,7 +1040,7 @@ function PersonDetailDrawer({
           <h2>{member.employeeName ?? 'Unnamed employee'}</h2>
           <p>{member.roleName ?? notAvailable}</p>
           <span>
-            {member.fitStatus ?? 'Fit status unavailable'} ·{' '}
+            {member.fitStatus ?? 'Fit status unavailable'} -{' '}
             {optionConfig(option, 0).label}
           </span>
         </div>
@@ -1030,52 +1087,76 @@ function PersonDetailDrawer({
       </div>
 
       <div className="drawer-section">
-        <h3>Backend Evidence</h3>
-        <div className="evidence-box">
-          <strong>Rationale</strong>
-          <p>{member.rationale ?? notAvailable}</p>
-        </div>
+        <h3>Evidence</h3>
+        <MemberRationaleSummary member={member} />
         <div className={`evidence-box ${hasConstraint(member) ? 'warn' : ''}`}>
-          <strong>Risk / Constraint</strong>
-          <p>{member.constraint ?? 'None'}</p>
+          <div className="evidence-heading">
+            <strong>Risk / Constraint</strong>
+            <span>{hasConstraint(member) ? 'Needs review' : 'Clear'}</span>
+          </div>
+          <p>{member.constraint ?? 'No constraint recorded.'}</p>
         </div>
       </div>
 
       <div className="drawer-section">
-        <h3>AI Recommendation</h3>
+        <h3>AI Summary</h3>
         {explanation ? (
-          <div className="ai-note">
-            <Sparkles size={17} />
-            <div>
-              <p>{explanation.recommendationNote ?? notAvailable}</p>
-              {explanation.reasoningBullets?.length ? (
+          <div className="ai-summary-stack">
+            <div className="ai-note">
+              <Sparkles size={17} />
+              <div>
+                <p>{explanation.recommendationNote ?? notAvailable}</p>
+                {explanation.reasoningBullets?.length ? (
+                  <ul>
+                    {explanation.reasoningBullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+            {explanation.nextActions?.length ? (
+              <div className="ai-next-actions">
+                <strong>Next Actions</strong>
                 <ul>
-                  {explanation.reasoningBullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
+                  {explanation.nextActions.map((action) => (
+                    <li key={action}>{action}</li>
                   ))}
                 </ul>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <p className="muted-copy">
-            Generate AI explanation to show recommendation note, reasoning,
-            risks, next actions, and EWA summary for this member.
-          </p>
+          <GenerateAiExplanationPanel
+            compact
+            disabled={isExplaining}
+            onGenerate={onGenerateExplanation}
+          />
         )}
       </div>
-
-      <div className="drawer-section">
-        <h3>EWA Summary</h3>
-        <div className="ewa-box">
-          <FileCheck2 size={17} />
-          <span>
-            {explanation?.ewaSummary ??
-              'EWA remains the final approval and booking process.'}
-          </span>
-        </div>
-      </div>
     </aside>
+  )
+}
+
+function MemberRationaleSummary({ member }: { member: RecommendationRunMember }) {
+  const rationaleLines = memberSkillEvidenceLines(member)
+
+  return (
+    <div className="evidence-box rationale-box">
+      <div className="evidence-heading">
+        <strong>Rationale</strong>
+        <span>{member.fitStatus ?? 'Backend evidence'}</span>
+      </div>
+      {rationaleLines.length ? (
+        <ul className="evidence-list">
+          {rationaleLines.map((line, index) => (
+            <li key={`${line}-${index}`}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>{member.rationale ?? notAvailable}</p>
+      )}
+    </div>
   )
 }
 
@@ -1091,17 +1172,6 @@ function DrawerScore({
       <strong>{formatScore(value)}</strong>
       <span>{label}</span>
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const normalized = status ?? 'AI_EXPLANATION_NOT_GENERATED'
-  const generated = normalized === 'AI_EXPLANATION_GENERATED'
-
-  return (
-    <span className={`status-badge ${generated ? 'generated' : 'pending'}`}>
-      {generated ? 'AI Generated' : readableStatus(normalized)}
-    </span>
   )
 }
 
@@ -1241,20 +1311,6 @@ function formatDate(value?: string) {
   }).format(date)
 }
 
-function formatDateTime(value?: string) {
-  if (!value) {
-    return 'Generated date unavailable'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-}
-
 function formatDuration(durationWeeks?: number) {
   if (!durationWeeks) {
     return notAvailable
@@ -1273,6 +1329,28 @@ function readinessText(option: RecommendationOption) {
   return option.readinessDays === 0
     ? 'Ready now'
     : `${option.readinessDays} day${option.readinessDays === 1 ? '' : 's'}`
+}
+
+function readinessPill(option: RecommendationOption) {
+  const days = option.readinessDays
+  if (days === undefined || days === null) {
+    return { label: 'Readiness unavailable', tone: 'neutral' }
+  }
+
+  if (days === 0) {
+    return { label: 'Ready now', tone: 'strong' }
+  }
+
+  const hasOpenGap = optionFteGap(option) > 0
+  const hasOpenConstraint = (option.members ?? []).some(hasConstraint)
+  const mostlyReady = hasOpenGap || hasOpenConstraint
+  const tone = days <= 30 && !mostlyReady ? 'strong' : 'warn'
+  const prefix = mostlyReady ? 'Mostly ready' : 'Ready'
+
+  return {
+    label: `${prefix} in ${days} day${days === 1 ? '' : 's'}`,
+    tone,
+  }
 }
 
 function availabilityText(member: RecommendationRunMember) {
@@ -1345,8 +1423,62 @@ function memberSkillScorePills(member: RecommendationRunMember) {
     }))
 }
 
-function risksText(option: RecommendationOption) {
-  return option.risks?.length ? option.risks.join('; ') : 'No risks supplied.'
+function teamRiskItems(
+  option: RecommendationOption,
+  explanation?: OptionExplanation,
+) {
+  const aiRiskItems = splitTextItems(explanation?.riskSummary)
+  if (aiRiskItems.length) {
+    return aiRiskItems.slice(0, 4)
+  }
+
+  return riskItems(option)
+}
+
+function splitTextItems(value?: string) {
+  if (!value?.trim()) {
+    return []
+  }
+
+  return value
+    .split(/\n|;/)
+    .map((item) => item.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
+function buildEwaSelectionPayload(
+  opportunityId: string,
+  option: RecommendationOption,
+  optionIndex: number,
+): EwaRecommendationSelectionPayload {
+  const config = optionConfig(option, optionIndex)
+
+  return {
+    opportunityId,
+    selectedOption: {
+      optionName: config.label.replace(`${config.shortLabel}: `, ''),
+      matchScore: optionMatchScore(option) ?? undefined,
+      confidence: toNumber(option.confidenceScore) ?? undefined,
+      riskLevel: option.riskLevel,
+      teamSize: option.selectedMemberCount ?? option.members?.length ?? 0,
+    },
+    selectedCandidates: (option.members ?? [])
+      .filter((member) => member.opportunityRoleId && member.employeeId)
+      .map((member) => {
+        const memberWithOverlay = member as MemberWithOverlayReference
+
+        return {
+          opportunityOverlayId:
+            memberWithOverlay.opportunityOverlayId ??
+            memberWithOverlay.overlayId,
+          opportunityId,
+          opportunityRoleId: member.opportunityRoleId as string,
+          employeeId: member.employeeId as string,
+          availableFTEAtStart: toNumber(member.availableFteAtStart) ?? undefined,
+          fteGap: toNumber(member.fteGap) ?? undefined,
+        }
+      }),
+  }
 }
 
 function riskItems(option: RecommendationOption) {
@@ -1366,6 +1498,19 @@ function optionFteGap(option: RecommendationOption) {
 
 function bestMemberScore(member: RecommendationRunMember) {
   return toNumber(member.overallStaffingScore ?? member.matchScore)
+}
+
+function optionMatchScore(option: RecommendationOption) {
+  const scores = (option.members ?? [])
+    .map(bestMemberScore)
+    .filter((score): score is number => score !== null)
+
+  if (!scores.length) {
+    return toNumber(option.confidenceScore)
+  }
+
+  const average = scores.reduce((sum, score) => sum + score, 0) / scores.length
+  return Math.round(average)
 }
 
 function hasConstraint(member: RecommendationRunMember) {
@@ -1392,14 +1537,6 @@ function initials(name?: string) {
   }
   const parts = name.trim().split(/\s+/).slice(0, 2)
   return parts.map((part) => part[0]?.toUpperCase()).join('') || 'NA'
-}
-
-function firstText(values?: string[]) {
-  return values?.find((value) => Boolean(value?.trim()))
-}
-
-function readableStatus(status: string) {
-  return titleCase(status.replace(/^AI_EXPLANATION_/, 'AI '))
 }
 
 function titleCase(value: string) {

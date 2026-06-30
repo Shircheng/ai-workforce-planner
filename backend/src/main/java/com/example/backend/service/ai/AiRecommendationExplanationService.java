@@ -130,7 +130,6 @@ public class AiRecommendationExplanationService {
                           "reasoningBullets": ["string"],
                           "riskSummary": "string",
                           "nextActions": ["string"],
-                          "ewaSummary": "string",
                           "members": [
                             {
                               "employeeId": "string",
@@ -138,8 +137,7 @@ public class AiRecommendationExplanationService {
                               "recommendationNote": "string",
                               "reasoningBullets": ["string"],
                               "riskSummary": "string",
-                              "nextActions": ["string"],
-                              "ewaSummary": "string"
+                              "nextActions": ["string"]
                             }
                           ]
                         }
@@ -281,7 +279,6 @@ public class AiRecommendationExplanationService {
                 .reasoningBullets(requiredList(optionNode, "reasoningBullets", option.optionId()))
                 .riskSummary(requiredText(optionNode, "riskSummary", option.optionId()))
                 .nextActions(requiredList(optionNode, "nextActions", option.optionId()))
-                .ewaSummary(requiredText(optionNode, "ewaSummary", option.optionId()))
                 .members(members)
                 .build();
     }
@@ -296,7 +293,6 @@ public class AiRecommendationExplanationService {
                 .reasoningBullets(requiredList(memberNode, "reasoningBullets", member.employeeId()))
                 .riskSummary(requiredText(memberNode, "riskSummary", member.employeeId()))
                 .nextActions(requiredList(memberNode, "nextActions", member.employeeId()))
-                .ewaSummary(requiredText(memberNode, "ewaSummary", member.employeeId()))
                 .build();
     }
 
@@ -335,8 +331,6 @@ public class AiRecommendationExplanationService {
                 .riskSummary("Key risks/gaps: " + value(option.risks())
                         + ". Missing skills: " + value(option.missingSkills()) + ".")
                 .nextActions(optionNextActions(option, members))
-                .ewaSummary("EWA remains the final approval and booking process for every recommended team member. Member EWA statuses: "
-                        + value(option.members().stream().map(MemberEvidence::ewaStatus).filter(StringUtils::hasText).distinct().toList()) + ".")
                 .members(members)
                 .build();
     }
@@ -365,8 +359,6 @@ public class AiRecommendationExplanationService {
                 ))
                 .riskSummary(memberRiskSummary(member))
                 .nextActions(memberNextActions(member))
-                .ewaSummary("EWA status: " + value(member.ewaStatus())
-                        + ". EWA remains the final approval and booking step before the employee is booked.")
                 .build();
     }
 

@@ -19,6 +19,5 @@ public class OptionExplanation {
     private List<String> reasoningBullets;
     private String riskSummary;
     private List<String> nextActions;
-    private String ewaSummary;
     private List<MemberExplanation> members;
 }
