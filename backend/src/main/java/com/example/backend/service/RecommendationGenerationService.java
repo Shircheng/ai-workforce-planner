@@ -38,7 +38,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -61,6 +60,9 @@ public class RecommendationGenerationService {
     private static final String OPTION_SKILL_FIT = "BEST_SKILL_FIT";
     private static final String OPTION_FASTEST = "FASTEST_AVAILABLE_TEAM";
     private static final String OPTION_BALANCED = "BALANCED_LOW_RISK_TEAM";
+    private static final BigDecimal DIVERSIFICATION_SCORE_TOLERANCE = BigDecimal.valueOf(15);
+    private static final BigDecimal DIVERSIFICATION_MIN_AVAILABILITY_SCORE = BigDecimal.valueOf(70);
+    private static final BigDecimal DIVERSIFICATION_MAX_RISK_INCREASE = BigDecimal.valueOf(20);
 
     private final OpportunityRepository opportunityRepository;
     private final OpportunityRoleRepository opportunityRoleRepository;
@@ -149,6 +151,7 @@ public class RecommendationGenerationService {
                 .collect(Collectors.groupingBy(Bench::getEmployeeId));
 
         Map<String, List<CandidateResult>> rankedCandidatesByRole = new HashMap<>();
+        Map<String, CandidateResult> candidateResultByAssignment = new HashMap<>();
         for (OpportunityRole role : roles) {
             if (role.getOpportunityRoleId() == null) {
                 continue;
@@ -173,6 +176,10 @@ public class RecommendationGenerationService {
                 );
 
                 roleCandidates.add(result);
+                candidateResultByAssignment.put(
+                        assignmentKey(role.getOpportunityRoleId(), employee.getEmployeeId()),
+                        result
+                );
             }
 
             rankedCandidatesByRole.put(role.getOpportunityRoleId(), sortCandidatesForOverlay(roleCandidates));
@@ -211,11 +218,36 @@ public class RecommendationGenerationService {
                 .filter(role -> role.getOpportunityRoleId() != null)
                 .collect(Collectors.toMap(OpportunityRole::getOpportunityRoleId, role -> role));
 
-        List<RecommendationOptionDto> options = List.of(
-                buildOption(OPTION_SKILL_FIT, generatedOverlays, roleById),
-                buildOption(OPTION_FASTEST, generatedOverlays, roleById),
-                buildOption(OPTION_BALANCED, generatedOverlays, roleById)
+        List<RecommendationOptionDto> options = new ArrayList<>();
+        RecommendationOptionDto bestSkillOption = buildOption(
+                OPTION_SKILL_FIT,
+                generatedOverlays,
+                roleById,
+                candidateResultByAssignment,
+                skillsByEmployee,
+                List.of()
         );
+        options.add(bestSkillOption);
+
+        RecommendationOptionDto fastestOption = buildOption(
+                OPTION_FASTEST,
+                generatedOverlays,
+                roleById,
+                candidateResultByAssignment,
+                skillsByEmployee,
+                options
+        );
+        options.add(fastestOption);
+
+        RecommendationOptionDto balancedOption = buildOption(
+                OPTION_BALANCED,
+                generatedOverlays,
+                roleById,
+                candidateResultByAssignment,
+                skillsByEmployee,
+                options
+        );
+        options.add(balancedOption);
 
         String recommendationRunId = "RRUN-" + UUID.randomUUID();
         Instant generatedAt = Instant.now();
@@ -300,7 +332,14 @@ public class RecommendationGenerationService {
                 .riskLevel(option.getRiskLevel())
                 .readinessDays(option.getReadinessDays())
                 .selectedMemberCount(option.getSelectedMemberCount())
-                .risks(option.getRisks())
+                .locationFitScore(option.getLocationFitScore())
+                .locationFit(uniqueList(option.getLocationFit()))
+                .skillCoverageScore(option.getSkillCoverageScore())
+                .matchedRequiredSkills(uniqueList(option.getMatchedRequiredSkills()))
+                .missingRequiredSkills(uniqueList(option.getMissingRequiredSkills()))
+                .matchedDesiredSkills(uniqueList(option.getMatchedDesiredSkills()))
+                .missingDesiredSkills(uniqueList(option.getMissingDesiredSkills()))
+                .risks(uniqueList(option.getRisks()))
                 .members(option.getMembers() == null ? List.of() : option.getMembers().stream()
                         .map(this::toRecommendationRunMember)
                         .toList())
@@ -319,6 +358,11 @@ public class RecommendationGenerationService {
                 .capabilityFitScore(member.getCapabilityFitScore())
                 .availabilityFitScore(member.getAvailabilityFitScore())
                 .overallStaffingScore(member.getOverallStaffingScore())
+                .skillCoverageScore(member.getSkillCoverageScore())
+                .matchedRequiredSkills(uniqueList(member.getMatchedRequiredSkills()))
+                .missingRequiredSkills(uniqueList(member.getMissingRequiredSkills()))
+                .matchedDesiredSkills(uniqueList(member.getMatchedDesiredSkills()))
+                .missingDesiredSkills(uniqueList(member.getMissingDesiredSkills()))
                 .availableFteAtStart(member.getAvailableFteAtStart())
                 .fteGap(member.getFteGap())
                 .earliestFullAvailabilityDate(member.getEarliestFullAvailabilityDate())
@@ -448,7 +492,10 @@ public class RecommendationGenerationService {
     private RecommendationOptionDto buildOption(
             String optionType,
             List<OpportunityOverlay> overlays,
-            Map<String, OpportunityRole> roleById
+            Map<String, OpportunityRole> roleById,
+            Map<String, CandidateResult> candidateResultByAssignment,
+            Map<String, List<EmployeeSkill>> skillsByEmployee,
+            List<RecommendationOptionDto> previousOptions
     ) {
         Map<String, List<OpportunityOverlay>> overlaysByRole = overlays.stream()
                 .filter(overlay -> overlay.getOpportunityRoleId() != null)
@@ -456,13 +503,14 @@ public class RecommendationGenerationService {
 
         List<OpportunityOverlay> selectedMembers = new ArrayList<>();
         Set<String> selectedEmployeeIds = new HashSet<>();
-        for (Map.Entry<String, List<OpportunityOverlay>> entry : overlaysByRole.entrySet()) {
-            OpportunityRole role = roleById.get(entry.getKey());
+        List<String> orderedRoleIds = overlaysByRole.keySet().stream().sorted().toList();
+        for (String roleId : orderedRoleIds) {
+            OpportunityRole role = roleById.get(roleId);
             if (role == null) {
                 continue;
             }
 
-            List<OpportunityOverlay> sorted = sortForOption(entry.getValue(), optionType);
+            List<OpportunityOverlay> sorted = sortForOption(overlaysByRole.get(roleId), optionType);
             List<OpportunityOverlay> uniqueCandidates = sorted.stream()
                     .filter(overlay -> !selectedEmployeeIds.contains(overlay.getEmployeeId()))
                     .toList();
@@ -474,6 +522,14 @@ public class RecommendationGenerationService {
                     .filter(Objects::nonNull)
                     .toList());
         }
+
+        selectedMembers = diversifyIfDuplicate(
+                optionType,
+                selectedMembers,
+                overlaysByRole,
+                roleById,
+                previousOptions
+        );
 
         BigDecimal confidenceScore = average(selectedMembers.stream()
                 .map(overlay -> optionScore(overlay, optionType))
@@ -489,24 +545,15 @@ public class RecommendationGenerationService {
         String riskLevel = riskLevel(riskScore);
 
         List<RecommendationOptionMemberDto> members = selectedMembers.stream()
-                .map(overlay -> RecommendationOptionMemberDto.builder()
-                        .opportunityRoleId(overlay.getOpportunityRoleId())
-                        .roleName(roleName(roleById.get(overlay.getOpportunityRoleId())))
-                        .employeeId(overlay.getEmployeeId())
-                        .employeeName(overlay.getEmployeeName())
-                        .rank(overlay.getRank())
-                        .fitStatus(overlay.getFitStatus())
-                        .matchScore(overlay.getMatchScore())
-                        .capabilityFitScore(overlay.getCapabilityFitScore())
-                        .availabilityFitScore(overlay.getAvailabilityFitScore())
-                        .overallStaffingScore(overlay.getOverallStaffingScore())
-                        .availableFteAtStart(overlay.getAvailableFTEAtStart())
-                        .fteGap(overlay.getFteGap())
-                        .earliestFullAvailabilityDate(overlay.getEarliestFullAvailabilityDate())
-                        .rationale(overlay.getRationale())
-                        .constraint(overlay.getConstraint())
-                        .build())
+                .map(overlay -> toRecommendationOptionMember(overlay, roleById, candidateResultByAssignment))
                 .toList();
+        TeamSkillEvidence teamSkillEvidence = buildTeamSkillEvidence(selectedMembers, roleById, skillsByEmployee);
+        BigDecimal locationFitScore = average(selectedMembers.stream()
+                .map(overlay -> candidateFor(overlay, candidateResultByAssignment))
+                .filter(Objects::nonNull)
+                .map(CandidateResult::locationFitScore)
+                .toList());
+        List<String> locationFit = buildOptionLocationFit(selectedMembers, candidateResultByAssignment);
 
         return RecommendationOptionDto.builder()
                 .optionType(optionType)
@@ -515,9 +562,201 @@ public class RecommendationGenerationService {
                 .riskLevel(riskLevel)
                 .readinessDays(readinessDays)
                 .selectedMemberCount(members.size())
-                .risks(risks)
+                .locationFitScore(locationFitScore)
+                .locationFit(locationFit)
+                .skillCoverageScore(teamSkillEvidence.skillCoverageScore())
+                .matchedRequiredSkills(teamSkillEvidence.matchedRequiredSkills())
+                .missingRequiredSkills(teamSkillEvidence.missingRequiredSkills())
+                .matchedDesiredSkills(teamSkillEvidence.matchedDesiredSkills())
+                .missingDesiredSkills(teamSkillEvidence.missingDesiredSkills())
+                .risks(uniqueList(risks))
                 .members(members)
                 .build();
+    }
+
+    private RecommendationOptionMemberDto toRecommendationOptionMember(
+            OpportunityOverlay overlay,
+            Map<String, OpportunityRole> roleById,
+            Map<String, CandidateResult> candidateResultByAssignment
+    ) {
+        CandidateResult candidate = candidateResultByAssignment.get(
+                assignmentKey(overlay.getOpportunityRoleId(), overlay.getEmployeeId())
+        );
+
+        return RecommendationOptionMemberDto.builder()
+                .opportunityRoleId(overlay.getOpportunityRoleId())
+                .roleName(roleName(roleById.get(overlay.getOpportunityRoleId())))
+                .employeeId(overlay.getEmployeeId())
+                .employeeName(overlay.getEmployeeName())
+                .rank(overlay.getRank())
+                .fitStatus(overlay.getFitStatus())
+                .matchScore(overlay.getMatchScore())
+                .capabilityFitScore(overlay.getCapabilityFitScore())
+                .availabilityFitScore(overlay.getAvailabilityFitScore())
+                .overallStaffingScore(overlay.getOverallStaffingScore())
+                .skillCoverageScore(candidate == null ? skillCoverageScoreFromCounts(overlay) : candidate.skillCoverageScore())
+                .matchedRequiredSkills(candidate == null ? List.of() : candidate.matchedRequiredSkills())
+                .missingRequiredSkills(candidate == null ? List.of() : candidate.missingRequiredSkills())
+                .matchedDesiredSkills(candidate == null ? List.of() : candidate.matchedDesiredSkills())
+                .missingDesiredSkills(candidate == null ? List.of() : candidate.missingDesiredSkills())
+                .availableFteAtStart(overlay.getAvailableFTEAtStart())
+                .fteGap(overlay.getFteGap())
+                .earliestFullAvailabilityDate(overlay.getEarliestFullAvailabilityDate())
+                .rationale(overlay.getRationale())
+                .constraint(overlay.getConstraint())
+                .build();
+    }
+
+    private CandidateResult candidateFor(
+            OpportunityOverlay overlay,
+            Map<String, CandidateResult> candidateResultByAssignment
+    ) {
+        return candidateResultByAssignment.get(
+                assignmentKey(overlay.getOpportunityRoleId(), overlay.getEmployeeId())
+        );
+    }
+
+    private List<String> buildOptionLocationFit(
+            List<OpportunityOverlay> selectedMembers,
+            Map<String, CandidateResult> candidateResultByAssignment
+    ) {
+        return selectedMembers.stream()
+                .map(overlay -> candidateFor(overlay, candidateResultByAssignment))
+                .filter(Objects::nonNull)
+                .map(CandidateResult::employee)
+                .map(this::locationLabel)
+                .filter(location -> !location.isBlank())
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toCollection(LinkedHashSet::new),
+                        List::copyOf
+                ));
+    }
+
+    private String locationLabel(Employee employee) {
+        if (employee == null || isBlank(employee.getCountry())) {
+            return "";
+        }
+
+        return employee.getCountry().trim();
+    }
+
+    private TeamSkillEvidence buildTeamSkillEvidence(
+            List<OpportunityOverlay> selectedMembers,
+            Map<String, OpportunityRole> roleById,
+            Map<String, List<EmployeeSkill>> skillsByEmployee
+    ) {
+        Set<String> teamSkills = selectedMembers.stream()
+                .map(OpportunityOverlay::getEmployeeId)
+                .filter(Objects::nonNull)
+                .flatMap(employeeId -> skillsByEmployee.getOrDefault(employeeId, List.of()).stream())
+                .map(EmployeeSkill::getSkillName)
+                .map(this::normalize)
+                .filter(skill -> !skill.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<String> requiredSkills = selectedMembers.stream()
+                .map(member -> roleById.get(member.getOpportunityRoleId()))
+                .filter(Objects::nonNull)
+                .flatMap(role -> safeList(role.getRequiredSkills()).stream())
+                .toList();
+        List<String> desiredSkills = selectedMembers.stream()
+                .map(member -> roleById.get(member.getOpportunityRoleId()))
+                .filter(Objects::nonNull)
+                .flatMap(role -> safeList(role.getDesiredSkills()).stream())
+                .toList();
+
+        SkillMatchEvidence requiredEvidence = skillMatchEvidence(requiredSkills, teamSkills);
+        SkillMatchEvidence desiredEvidence = skillMatchEvidence(desiredSkills, teamSkills);
+
+        return new TeamSkillEvidence(
+                skillCoverageScore(requiredEvidence, desiredEvidence),
+                requiredEvidence.matchedSkills(),
+                requiredEvidence.missingSkills(),
+                desiredEvidence.matchedSkills(),
+                desiredEvidence.missingSkills()
+        );
+    }
+
+    private BigDecimal skillCoverageScoreFromCounts(OpportunityOverlay overlay) {
+        SkillMatchEvidence requiredEvidence = new SkillMatchEvidence(
+                List.of(),
+                List.of(),
+                ratio(
+                        overlay.getRequiredSkillsMatched() == null ? 0 : overlay.getRequiredSkillsMatched(),
+                        overlay.getRequiredSkillsTotal() == null ? 0 : overlay.getRequiredSkillsTotal()
+                ),
+                overlay.getRequiredSkillsTotal() == null ? 0 : overlay.getRequiredSkillsTotal()
+        );
+        SkillMatchEvidence desiredEvidence = new SkillMatchEvidence(
+                List.of(),
+                List.of(),
+                ratio(
+                        overlay.getDesiredSkillsMatched() == null ? 0 : overlay.getDesiredSkillsMatched(),
+                        overlay.getDesiredSkillsTotal() == null ? 0 : overlay.getDesiredSkillsTotal()
+                ),
+                overlay.getDesiredSkillsTotal() == null ? 0 : overlay.getDesiredSkillsTotal()
+        );
+        return skillCoverageScore(requiredEvidence, desiredEvidence);
+    }
+
+    private SkillMatchEvidence skillMatchEvidence(Collection<String> targetSkills, Set<String> candidateSkills) {
+        Map<String, String> canonicalTargetSkills = canonicalSkillNames(targetSkills);
+        if (canonicalTargetSkills.isEmpty()) {
+            return new SkillMatchEvidence(List.of(), List.of(), HUNDRED, 0);
+        }
+
+        List<String> matchedSkills = new ArrayList<>();
+        List<String> missingSkills = new ArrayList<>();
+        for (Map.Entry<String, String> targetSkill : canonicalTargetSkills.entrySet()) {
+            if (candidateSkills.contains(targetSkill.getKey())) {
+                matchedSkills.add(targetSkill.getValue());
+            } else {
+                missingSkills.add(targetSkill.getValue());
+            }
+        }
+
+        return new SkillMatchEvidence(
+                List.copyOf(matchedSkills),
+                List.copyOf(missingSkills),
+                ratio(matchedSkills.size(), canonicalTargetSkills.size()),
+                canonicalTargetSkills.size()
+        );
+    }
+
+    private BigDecimal skillCoverageScore(SkillMatchEvidence requiredEvidence, SkillMatchEvidence desiredEvidence) {
+        BigDecimal weightedScore = BigDecimal.ZERO;
+        BigDecimal weightTotal = BigDecimal.ZERO;
+
+        if (requiredEvidence.totalSkills() > 0) {
+            BigDecimal weight = BigDecimal.valueOf(0.70);
+            weightedScore = weightedScore.add(requiredEvidence.coverageScore().multiply(weight));
+            weightTotal = weightTotal.add(weight);
+        }
+        if (desiredEvidence.totalSkills() > 0) {
+            BigDecimal weight = BigDecimal.valueOf(0.30);
+            weightedScore = weightedScore.add(desiredEvidence.coverageScore().multiply(weight));
+            weightTotal = weightTotal.add(weight);
+        }
+        if (weightTotal.compareTo(BigDecimal.ZERO) == 0) {
+            return HUNDRED;
+        }
+
+        return weightedScore.divide(weightTotal, 2, RoundingMode.HALF_UP);
+    }
+
+    private Map<String, String> canonicalSkillNames(Collection<String> skills) {
+        if (skills == null) {
+            return Map.of();
+        }
+
+        Map<String, String> canonical = new java.util.LinkedHashMap<>();
+        for (String skill : skills) {
+            String normalized = normalize(skill);
+            if (!normalized.isBlank()) {
+                canonical.putIfAbsent(normalized, skill == null ? "" : skill.trim());
+            }
+        }
+        return canonical;
     }
 
     private List<OpportunityOverlay> selectTeamMembersForRole(List<OpportunityOverlay> sorted, OpportunityRole role) {
@@ -557,6 +796,123 @@ public class RecommendationGenerationService {
         return selected;
     }
 
+    private List<OpportunityOverlay> diversifyIfDuplicate(
+            String optionType,
+            List<OpportunityOverlay> selectedMembers,
+            Map<String, List<OpportunityOverlay>> overlaysByRole,
+            Map<String, OpportunityRole> roleById,
+            List<RecommendationOptionDto> previousOptions
+    ) {
+        if (previousOptions == null || previousOptions.isEmpty() || !duplicatesPreviousOption(selectedMembers, previousOptions)) {
+            return selectedMembers;
+        }
+
+        List<String> orderedRoleIds = selectedMembers.stream()
+                .map(OpportunityOverlay::getOpportunityRoleId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+
+        for (String roleId : orderedRoleIds) {
+            OpportunityRole role = roleById.get(roleId);
+            List<OpportunityOverlay> currentForRole = selectedMembers.stream()
+                    .filter(member -> roleId.equals(member.getOpportunityRoleId()))
+                    .toList();
+            if (role == null || currentForRole.size() != 1) {
+                continue;
+            }
+
+            OpportunityOverlay current = currentForRole.getFirst();
+            Set<String> employeeIdsInOtherRoles = selectedMembers.stream()
+                    .filter(member -> !roleId.equals(member.getOpportunityRoleId()))
+                    .map(OpportunityOverlay::getEmployeeId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            List<OpportunityOverlay> alternatives = sortForOption(
+                    overlaysByRole.getOrDefault(roleId, List.of()),
+                    optionType
+            );
+
+            for (OpportunityOverlay alternative : alternatives) {
+                String employeeId = alternative.getEmployeeId();
+                if (employeeId == null
+                        || employeeId.equals(current.getEmployeeId())
+                        || employeeIdsInOtherRoles.contains(employeeId)) {
+                    continue;
+                }
+                if (!isAcceptableDiversificationAlternative(current, alternative, optionType)) {
+                    continue;
+                }
+
+                List<OpportunityOverlay> proposedMembers = selectedMembers.stream()
+                        .map(member -> roleId.equals(member.getOpportunityRoleId()) ? alternative : member)
+                        .toList();
+
+                if (!duplicatesPreviousOption(proposedMembers, previousOptions)) {
+                    return proposedMembers;
+                }
+            }
+        }
+
+        return selectedMembers;
+    }
+
+    private boolean isAcceptableDiversificationAlternative(
+            OpportunityOverlay current,
+            OpportunityOverlay alternative,
+            String optionType
+    ) {
+        BigDecimal alternativeAvailability = defaultBigDecimal(alternative.getAvailabilityFitScore(), BigDecimal.ZERO);
+        if (alternativeAvailability.compareTo(DIVERSIFICATION_MIN_AVAILABILITY_SCORE) < 0) {
+            return false;
+        }
+
+        BigDecimal currentCapability = defaultBigDecimal(current.getCapabilityFitScore(), BigDecimal.ZERO);
+        BigDecimal alternativeCapability = defaultBigDecimal(alternative.getCapabilityFitScore(), BigDecimal.ZERO);
+        if (alternativeCapability.add(DIVERSIFICATION_SCORE_TOLERANCE).compareTo(currentCapability) < 0) {
+            return false;
+        }
+
+        BigDecimal currentOptionScore = optionScore(current, optionType);
+        BigDecimal alternativeOptionScore = optionScore(alternative, optionType);
+        if (alternativeOptionScore.add(DIVERSIFICATION_SCORE_TOLERANCE).compareTo(currentOptionScore) < 0) {
+            return false;
+        }
+
+        BigDecimal currentRisk = memberRiskScore(current);
+        BigDecimal alternativeRisk = memberRiskScore(alternative);
+        return alternativeRisk.subtract(currentRisk).compareTo(DIVERSIFICATION_MAX_RISK_INCREASE) <= 0;
+    }
+
+    private boolean duplicatesPreviousOption(
+            List<OpportunityOverlay> selectedMembers,
+            List<RecommendationOptionDto> previousOptions
+    ) {
+        String selectedSignature = teamSignature(selectedMembers);
+        return previousOptions.stream()
+                .map(this::teamSignature)
+                .anyMatch(selectedSignature::equals);
+    }
+
+    private String teamSignature(List<OpportunityOverlay> members) {
+        return members.stream()
+                .map(member -> safe(member.getOpportunityRoleId()) + ":" + safe(member.getEmployeeId()))
+                .sorted()
+                .collect(Collectors.joining("|"));
+    }
+
+    private String teamSignature(RecommendationOptionDto option) {
+        if (option.getMembers() == null) {
+            return "";
+        }
+        return option.getMembers().stream()
+                .map(member -> safe(member.getOpportunityRoleId()) + ":" + safe(member.getEmployeeId()))
+                .sorted()
+                .collect(Collectors.joining("|"));
+    }
+
     private List<OpportunityOverlay> sortForOption(List<OpportunityOverlay> overlays, String optionType) {
         Comparator<OpportunityOverlay> comparator;
         if (OPTION_SKILL_FIT.equals(optionType)) {
@@ -571,7 +927,8 @@ public class RecommendationGenerationService {
                     .thenComparing(RecommendationGenerationService::scoreValueForSortOverall, Comparator.reverseOrder());
         } else {
             comparator = Comparator
-                    .comparing(RecommendationGenerationService::scoreValueForSortOverall).reversed()
+                    .comparing(this::balancedScoreForSort).reversed()
+                    .thenComparing(RecommendationGenerationService::scoreValueForSortOverall, Comparator.reverseOrder())
                     .thenComparing(RecommendationGenerationService::scoreValueForSortCapability, Comparator.reverseOrder())
                     .thenComparing(RecommendationGenerationService::scoreValueForSortAvailability, Comparator.reverseOrder());
         }
@@ -593,13 +950,16 @@ public class RecommendationGenerationService {
         Set<String> requiredSkills = normalizeValues(role.getRequiredSkills());
         Set<String> desiredSkills = normalizeValues(role.getDesiredSkills());
         Set<String> candidateSkills = normalizeValues(skills.stream().map(EmployeeSkill::getSkillName).toList());
+        SkillMatchEvidence requiredEvidence = skillMatchEvidence(role.getRequiredSkills(), candidateSkills);
+        SkillMatchEvidence desiredEvidence = skillMatchEvidence(role.getDesiredSkills(), candidateSkills);
 
-        int requiredMatched = countIntersection(requiredSkills, candidateSkills);
-        int desiredMatched = countIntersection(desiredSkills, candidateSkills);
+        int requiredMatched = requiredEvidence.matchedSkills().size();
+        int desiredMatched = desiredEvidence.matchedSkills().size();
 
-        BigDecimal requiredCoverage = ratio(requiredMatched, requiredSkills.size());
-        BigDecimal desiredCoverage = ratio(desiredMatched, desiredSkills.size());
+        BigDecimal requiredCoverage = requiredEvidence.coverageScore();
+        BigDecimal desiredCoverage = desiredEvidence.coverageScore();
         BigDecimal skillStrength = skillStrength(skills, requiredSkills, desiredSkills);
+        BigDecimal skillCoverageScore = skillCoverageScore(requiredEvidence, desiredEvidence);
 
         BigDecimal skillsScore = weighted(
                 requiredCoverage, BigDecimal.valueOf(0.70),
@@ -668,10 +1028,16 @@ public class RecommendationGenerationService {
                 overallScore,
                 capabilityScore,
                 availabilityScoreInt,
+                locationScore,
+                skillCoverageScore,
                 requiredMatched,
                 requiredSkills.size(),
                 desiredMatched,
                 desiredSkills.size(),
+                requiredEvidence.matchedSkills(),
+                requiredEvidence.missingSkills(),
+                desiredEvidence.matchedSkills(),
+                desiredEvidence.missingSkills(),
                 availabilitySummary.availableFteAtStart(),
                 availabilitySummary.fteGap(),
                 availabilitySummary.earliestFullAvailabilityDate(),
@@ -993,11 +1359,10 @@ public class RecommendationGenerationService {
     private List<String> buildRisks(List<OpportunityOverlay> selectedMembers) {
         LinkedHashSet<String> risks = new LinkedHashSet<>();
         for (OpportunityOverlay member : selectedMembers) {
-            if (normalize(member.getFitStatus()).contains("availabilityrisk")) {
-                risks.add(member.getEmployeeName() + " has availability risk.");
-            }
             if (hasBlockingConstraint(member)) {
                 risks.add(member.getEmployeeName() + ": " + member.getConstraint());
+            } else if (normalize(member.getFitStatus()).contains("availabilityrisk")) {
+                risks.add(member.getEmployeeName() + " has availability risk.");
             }
         }
 
@@ -1090,6 +1455,40 @@ public class RecommendationGenerationService {
 
         String normalized = normalize(member.getConstraint());
         return !"none".equals(normalized) && !normalized.contains("noblockingconstraintsdetected");
+    }
+
+    private BigDecimal balancedScoreForSort(OpportunityOverlay overlay) {
+        BigDecimal overallScore = defaultBigDecimal(overlay.getOverallStaffingScore(), BigDecimal.ZERO);
+        BigDecimal availabilityScore = defaultBigDecimal(overlay.getAvailabilityFitScore(), BigDecimal.ZERO);
+        BigDecimal riskScore = memberRiskScore(overlay);
+
+        return overallScore.multiply(BigDecimal.valueOf(0.70))
+                .add(availabilityScore.multiply(BigDecimal.valueOf(0.20)))
+                .subtract(riskScore.multiply(BigDecimal.valueOf(0.10)));
+    }
+
+    private BigDecimal memberRiskScore(OpportunityOverlay overlay) {
+        BigDecimal availabilityRisk = overlayAvailabilityRiskScore(overlay);
+        BigDecimal overallScore = defaultBigDecimal(overlay.getOverallStaffingScore(), BigDecimal.ZERO);
+        BigDecimal confidenceRisk = HUNDRED.subtract(overallScore).max(BigDecimal.ZERO).min(HUNDRED);
+        BigDecimal constraintRisk = hasBlockingConstraint(overlay) ? HUNDRED : BigDecimal.ZERO;
+
+        return availabilityRisk.multiply(BigDecimal.valueOf(0.60))
+                .add(confidenceRisk.multiply(BigDecimal.valueOf(0.25)))
+                .add(constraintRisk.multiply(BigDecimal.valueOf(0.15)))
+                .max(BigDecimal.ZERO)
+                .min(HUNDRED)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal overlayAvailabilityRiskScore(OpportunityOverlay overlay) {
+        BigDecimal gap = defaultBigDecimal(overlay.getFteGap(), BigDecimal.ZERO);
+        BigDecimal available = defaultBigDecimal(overlay.getAvailableFTEAtStart(), BigDecimal.ZERO);
+        BigDecimal required = available.add(gap);
+        if (required.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return gap.divide(required, 4, RoundingMode.HALF_UP).multiply(HUNDRED).min(HUNDRED);
     }
 
     private BigDecimal optionScore(OpportunityOverlay overlay, String optionType) {
@@ -1223,6 +1622,32 @@ public class RecommendationGenerationService {
         return value.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String assignmentKey(String opportunityRoleId, String employeeId) {
+        return safe(opportunityRoleId) + ":" + safe(employeeId);
+    }
+
+    private List<String> safeList(List<String> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private List<String> uniqueList(Collection<String> values) {
+        if (values == null) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String value : values) {
+            if (!isBlank(value)) {
+                unique.add(value.trim());
+            }
+        }
+        return List.copyOf(unique);
+    }
+
     private boolean parseBoolean(String value) {
         String normalized = normalize(value);
         return normalized.equals("true") || normalized.equals("yes") || normalized.equals("y") || normalized.equals("1");
@@ -1317,10 +1742,16 @@ public class RecommendationGenerationService {
             BigDecimal overallStaffingScore,
             BigDecimal capabilityFitScore,
             BigDecimal availabilityFitScore,
+            BigDecimal locationFitScore,
+            BigDecimal skillCoverageScore,
             Integer requiredSkillsMatched,
             Integer requiredSkillsTotal,
             Integer desiredSkillsMatched,
             Integer desiredSkillsTotal,
+            List<String> matchedRequiredSkills,
+            List<String> missingRequiredSkills,
+            List<String> matchedDesiredSkills,
+            List<String> missingDesiredSkills,
             BigDecimal availableFteAtStart,
             BigDecimal fteGap,
             LocalDate earliestFullAvailabilityDate,
@@ -1335,6 +1766,23 @@ public class RecommendationGenerationService {
             BigDecimal availableFteAtStart,
             BigDecimal fteGap,
             LocalDate earliestFullAvailabilityDate
+    ) {
+    }
+
+    private record SkillMatchEvidence(
+            List<String> matchedSkills,
+            List<String> missingSkills,
+            BigDecimal coverageScore,
+            int totalSkills
+    ) {
+    }
+
+    private record TeamSkillEvidence(
+            BigDecimal skillCoverageScore,
+            List<String> matchedRequiredSkills,
+            List<String> missingRequiredSkills,
+            List<String> matchedDesiredSkills,
+            List<String> missingDesiredSkills
     ) {
     }
 }
