@@ -65,6 +65,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
     !error &&
     result !== null &&
     (result.totalEmployeesEvaluated === 0 || result.skillGaps.length === 0)
+  const hasAnalysisData = result !== null && !hasNoData
 
   useEffect(() => {
     void runSkillGap()
@@ -113,7 +114,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
         title="Skill Gap Analysis"
         eyebrow="Capability coverage"
         metaItems={
-          hasNoData
+          !hasAnalysisData
             ? []
             : [
                 `${skillNames.length} skills`,
@@ -124,7 +125,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
         }
       />
 
-      {!hasNoData ? (
+      {hasAnalysisData ? (
         <AnalysisControls
           requiredSkills={requiredSkills}
           activeFilterCount={activeFilterCount}
@@ -135,7 +136,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
         />
       ) : null}
 
-      {!hasNoData && isFilterOpen ? (
+      {hasAnalysisData && isFilterOpen ? (
         <AnalysisFilterPanel
           filterOptions={filterOptions}
           filters={filters}
@@ -157,7 +158,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
           title="No skill gap data yet"
           message="Import your workforce Excel dataset from the Dashboard, then run the skill gap analysis again."
         />
-      ) : (
+      ) : hasAnalysisData ? (
         <>
           <AnalysisSummary
             averageFitPercentage={result?.averageFitPercentage ?? 0}
@@ -183,7 +184,7 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
             />
           </section>
         </>
-      )}
+      ) : null}
     </>
   )
 }

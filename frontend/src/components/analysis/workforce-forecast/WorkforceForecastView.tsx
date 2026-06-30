@@ -80,6 +80,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
     !error &&
     result !== null &&
     (result.totalEmployeesEvaluated === 0 || forecastRows.length === 0)
+  const hasAnalysisData = result !== null && !hasNoData
 
   useEffect(() => {
     void runForecast()
@@ -128,7 +129,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
         title="Workforce Forecast"
         eyebrow="Availability planning"
         metaItems={
-          hasNoData
+          !hasAnalysisData
             ? []
             : [
                 `${horizonDays.join('/')} days`,
@@ -138,7 +139,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
         }
       />
 
-      {!hasNoData ? (
+      {hasAnalysisData ? (
         <section className="analysis-command-card" aria-label="Forecast controls">
           <div className="analysis-command-bar analysis-command-bar-forecast">
             <label className="analysis-field">
@@ -185,7 +186,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
         </section>
       ) : null}
 
-      {!hasNoData && isFilterOpen ? (
+      {hasAnalysisData && isFilterOpen ? (
         <ForecastFilterPanel
           filterOptions={filterOptions}
           filters={filters}
@@ -205,7 +206,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
           title="No workforce forecast data yet"
           message="Import your workforce Excel dataset from the Dashboard, then run the workforce forecast again."
         />
-      ) : (
+      ) : hasAnalysisData ? (
         <>
           <section
             className="analysis-overview analysis-forecast-overview"
@@ -230,7 +231,7 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
             />
           </section>
         </>
-      )}
+      ) : null}
     </>
   )
 }

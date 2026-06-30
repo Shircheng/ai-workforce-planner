@@ -90,6 +90,7 @@ function OpportunityForecastView() {
     !error &&
     result !== null &&
     ((summary?.totalOpportunities ?? 0) === 0 || result.skillDemand.length === 0)
+  const hasAnalysisData = result !== null && !hasNoData
 
   return (
     <>
@@ -97,7 +98,7 @@ function OpportunityForecastView() {
         title="Opportunity Forecast"
         eyebrow="Pipeline demand planning"
         metaItems={
-          hasNoData
+          !hasAnalysisData
             ? []
             : [
                 `${summary?.totalOpportunities ?? 0} opportunities`,
@@ -106,7 +107,7 @@ function OpportunityForecastView() {
         }
       />
 
-      {!hasNoData ? (
+      {hasAnalysisData ? (
         <section className="analysis-command-card" aria-label="Opportunity forecast controls">
           <div className="analysis-command-bar analysis-opportunity-command-bar">
             <label className="analysis-field">
@@ -147,7 +148,7 @@ function OpportunityForecastView() {
           title="No opportunity forecast data yet"
           message="Import opportunity and role data from the Dashboard, then run the opportunity forecast again."
         />
-      ) : (
+      ) : hasAnalysisData ? (
         <>
           <section
             className="analysis-overview analysis-opportunity-summary"
@@ -186,7 +187,7 @@ function OpportunityForecastView() {
             <SkillDemandPanel rows={result?.skillDemand ?? []} />
           </section>
         </>
-      )}
+      ) : null}
     </>
   )
 }
