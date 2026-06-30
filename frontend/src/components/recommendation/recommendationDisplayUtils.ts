@@ -223,23 +223,64 @@ export function teamRiskItems(
   option: RecommendationOption,
   explanation?: OptionExplanation,
 ) {
-  const aiRiskItems = splitTextItems(explanation?.riskSummary)
-  if (aiRiskItems.length) {
-    return aiRiskItems.slice(0, 4)
+  const structuredItems = [
+    ...riskItems(option),
+    missingSkillsRiskItem(option),
+  ].filter((item): item is string => Boolean(item))
+
+  if (structuredItems.length) {
+    return uniqueTextItems(structuredItems).slice(0, 5)
   }
 
-  return riskItems(option)
+  return splitRiskSummary(explanation?.riskSummary).slice(0, 5)
 }
 
-function splitTextItems(value?: string) {
+function splitRiskSummary(value?: string) {
   if (!value?.trim()) {
     return []
   }
 
-  return value
-    .split(/\n|;/)
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  const missingSkillIndex = normalized.search(/\bMissing skills:/i)
+  if (missingSkillIndex > 0) {
+    return uniqueTextItems([
+      cleanRiskPrefix(normalized.slice(0, missingSkillIndex)),
+      normalized.slice(missingSkillIndex),
+    ])
+  }
+
+  return uniqueTextItems(normalized
+    .split(/\n/)
     .map((item) => item.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
+    .filter(Boolean))
+}
+
+function cleanRiskPrefix(value: string) {
+  return value
+    .replace(/^Key risks\/gaps:\s*/i, '')
+    .replace(/\.\.$/, '.')
+    .trim()
+}
+
+function missingSkillsRiskItem(option: RecommendationOption) {
+  const missingSkills = normalizedList([
+    ...normalizedList(option.missingRequiredSkills),
+    ...normalizedList(option.missingDesiredSkills),
+  ])
+
+  if (!missingSkills.length) {
+    return null
+  }
+
+  return `Missing skills: ${missingSkills.join(', ')}.`
+}
+
+function uniqueTextItems(items: string[]) {
+  return Array.from(new Set(
+    items
+      .map((item) => item.replace(/\s+/g, ' ').trim())
+      .filter(Boolean),
+  ))
 }
 
 export function normalizedList(items?: string[] | null) {

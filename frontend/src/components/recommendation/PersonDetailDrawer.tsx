@@ -15,7 +15,6 @@ import {
   hasSkillEvidence,
   initials,
   memberSkillEvidenceLines,
-  normalizedList,
   notAvailable,
   optionConfig,
   scoreTone,
@@ -106,7 +105,6 @@ function PersonDetailDrawer({
         <h3>Evidence</h3>
         <MemberRationaleSummary member={member} />
         <MemberSkillEvidence member={member} />
-        <MemberLocationFit member={member} option={option} />
         <div className={`evidence-box ${hasConstraint(member) ? 'warn' : ''}`}>
           <div className="evidence-heading">
             <strong>Risk / Constraint</strong>
@@ -218,43 +216,6 @@ function MemberSkillEvidence({ member }: { member: RecommendationRunMember }) {
           tone="missing"
         />
       </div>
-    </div>
-  )
-}
-
-function MemberLocationFit({
-  member,
-  option,
-}: {
-  member: RecommendationRunMember
-  option: RecommendationOption
-}) {
-  const memberLocations = normalizedList(member.locationFit)
-  const optionLocations = normalizedList(option.locationFit)
-  const locations = memberLocations.length ? memberLocations : optionLocations
-  const memberScore = toNumber(member.locationFitScore)
-  const optionScore = toNumber(option.locationFitScore)
-  const score = memberScore ?? optionScore
-
-  if (!locations.length && score === null) {
-    return null
-  }
-
-  return (
-    <div className="evidence-box member-location-box">
-      <div className="evidence-heading">
-        <strong>Location Fit</strong>
-        <span>{score === null ? '--' : `${formatScore(score)}/100`}</span>
-      </div>
-      {locations.length ? (
-        <div className="location-chip-list member">
-          {locations.map((location) => (
-            <span key={location}>{location}</span>
-          ))}
-        </div>
-      ) : (
-        <p>No location fit supplied.</p>
-      )}
     </div>
   )
 }

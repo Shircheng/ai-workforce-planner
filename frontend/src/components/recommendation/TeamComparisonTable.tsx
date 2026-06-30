@@ -31,9 +31,9 @@ import {
   optionFteGap,
   readinessPill,
   readinessText,
-  riskItems,
   scorePercent,
   scoreTone,
+  teamRiskItems,
   toNumber,
 } from './recommendationDisplayUtils.ts'
 
@@ -127,13 +127,13 @@ function TeamComparisonTable({
       },
     },
     {
-      description: 'Known gaps and constraints.',
+      description: 'Known gaps, constraints, and missing skills.',
       icon: <ShieldCheck size={15} />,
       label: 'Key risks',
       render: (option: RecommendationOption) => (
         <ComparisonBulletList
           emptyText="No risks supplied."
-          items={riskItems(option)}
+          items={teamRiskItems(option, findOptionExplanation(explanation, option))}
           tone="risk"
         />
       ),
