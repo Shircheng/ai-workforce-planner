@@ -77,7 +77,6 @@ public class EmployeeService {
             String availability,
             String region,
             String grade,
-            String status,
             String role,
             String domain
     ) {
@@ -108,7 +107,7 @@ public class EmployeeService {
                 .filter(employee -> matchesAvailability(employee, availability))
                 .filter(employee -> matchesRegion(employee, region))
                 .filter(employee -> matchesGrade(employee, grade))
-                .filter(employee -> matchesStatus(employee, benchByEmployee.containsKey(employee.getEmployeeId()), status))
+                .filter(employee -> matchesDomain(employee, domain))
                 .toList();
 
         List<TalentExplorerEmployee> sortedEmployees = filteredEmployees.stream()
@@ -118,7 +117,8 @@ public class EmployeeService {
                         benchByEmployee.get(employee.getEmployeeId()),
                         skillSearch,
                         grade,
-                        region
+                        region,
+                        domain
                 ))
                 .sorted(Comparator
                         .comparingInt(TalentExplorerEmployee::fitScore)
@@ -210,13 +210,20 @@ public class EmployeeService {
         List<Employee> employees = employeeRepository.findAll();
         Set<String> grades = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         Set<String> regions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Set<String> domains = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
         for (Employee employee : employees) {
             addIfPresent(grades, employee.getGrade());
             addIfPresent(regions, employee.getRegion());
+            addIfPresent(domains, employee.getPrimaryDomain());
+            addIfPresent(domains, employee.getSecondaryDomain());
         }
 
-        return new EmployeeFilterOptions(new ArrayList<>(grades), new ArrayList<>(regions));
+        return new EmployeeFilterOptions(
+                new ArrayList<>(grades),
+                new ArrayList<>(regions),
+                new ArrayList<>(domains)
+        );
     }
 
     public PersonProfileResponse getPersonProfile(String employeeId) {
@@ -594,23 +601,14 @@ public class EmployeeService {
         return matchesAnyText(grade, employee.getGrade());
     }
 
-    private boolean matchesStatus(Employee employee, boolean hasBenchRecord, String status) {
-        String normalizedStatus = normalize(status);
-        if (normalizedStatus.isBlank() || "all".equals(normalizedStatus)) {
+    private boolean matchesDomain(Employee employee, String domain) {
+        String normalizedDomain = normalize(domain);
+        if (normalizedDomain.isBlank() || "all".equals(normalizedDomain) || "any".equals(normalizedDomain)) {
             return true;
         }
 
-        boolean isBench = hasBenchRecord || containsAny(employee.getAvailabilityCategory(), Set.of("bench"));
-        boolean isRollOff = employee.getExpectedReleaseDate() != null
-                || employee.getReleaseWindow() != null
-                || containsAny(employee.getAvailabilityCategory(), Set.of("roll", "release"));
-
-        return switch (normalizedStatus) {
-            case "bench" -> isBench;
-            case "rolloff" -> isRollOff;
-            case "benchrolloff" -> isBench || isRollOff;
-            default -> true;
-        };
+        return domainMatches(normalizedDomain, normalize(employee.getPrimaryDomain()))
+                || domainMatches(normalizedDomain, normalize(employee.getSecondaryDomain()));
     }
 
     private boolean matchesAnyText(String filter, String... values) {
@@ -635,7 +633,8 @@ public class EmployeeService {
             Bench bench,
             String skillSearch,
             String targetGrade,
-            String selectedRegion
+            String selectedRegion,
+            String selectedDomain
     ) {
         List<String> skills = employeeSkills.stream()
                 .sorted(Comparator
@@ -666,7 +665,8 @@ public class EmployeeService {
                 bench,
                 skillSearch,
                 targetGrade,
-                selectedRegion
+                selectedRegion,
+                selectedDomain
         );
 
         return new TalentExplorerEmployee(
@@ -691,18 +691,19 @@ public class EmployeeService {
             Bench bench,
             String skillSearch,
             String targetGrade,
-            String selectedRegion
+            String selectedRegion,
+            String selectedDomain
     ) {
         double skillScore = skillScore(employeeSkills, skillSearch);
         double availabilityScore = availabilityDaysScore(daysUntilAvailable(employee, bench));
         double gradeScore = gradeScore(targetGrade, employee.getGrade());
-        double statusScore = statusScore(employee, bench);
+        double domainScore = domainScore(employee, selectedDomain);
         double regionScore = regionScore(employee, selectedRegion);
 
         double weightedScore = skillScore * 0.50
                 + availabilityScore * 0.25
                 + gradeScore * 0.10
-                + statusScore * 0.10
+                + domainScore * 0.10
                 + regionScore * 0.05;
 
         return (int) Math.round(weightedScore);
@@ -781,25 +782,6 @@ public class EmployeeService {
         return 121;
     }
 
-    private double statusScore(Employee employee, Bench bench) {
-        if (containsAny(employee.getAvailabilityCategory(), Set.of("blocked", "inactive", "unavailable"))) {
-            return 0;
-        }
-        if (isBenchOrAvailable(employee, bench)) {
-            return 100;
-        }
-        if (isRollingOff(employee)) {
-            return 85;
-        }
-
-        BigDecimal currentAllocation = employee.getCurrentAllocationFTE();
-        if (currentAllocation != null && currentAllocation.compareTo(BigDecimal.ZERO) > 0) {
-            return 40;
-        }
-
-        return 0;
-    }
-
     private boolean isBenchOrAvailable(Employee employee, Bench bench) {
         BigDecimal availableFte = employee.getAvailableFTECurrent();
         return bench != null
@@ -811,6 +793,28 @@ public class EmployeeService {
         return employee.getExpectedReleaseDate() != null
                 || employee.getReleaseWindow() != null
                 || containsAny(employee.getAvailabilityCategory(), Set.of("roll", "release"));
+    }
+
+    private double domainScore(Employee employee, String selectedDomain) {
+        String normalizedDomain = normalize(selectedDomain);
+        if (normalizedDomain.isBlank() || "all".equals(normalizedDomain) || "any".equals(normalizedDomain)) {
+            return 100;
+        }
+
+        if (domainMatches(normalizedDomain, normalize(employee.getPrimaryDomain()))) {
+            return 100;
+        }
+        if (domainMatches(normalizedDomain, normalize(employee.getSecondaryDomain()))) {
+            return 70;
+        }
+        return 0;
+    }
+
+    private boolean domainMatches(String selectedDomain, String candidateDomain) {
+        return !candidateDomain.isBlank()
+                && (candidateDomain.equals(selectedDomain)
+                || candidateDomain.contains(selectedDomain)
+                || selectedDomain.contains(candidateDomain));
     }
 
     private double regionScore(Employee employee, String selectedRegion) {
@@ -1008,7 +1012,8 @@ public class EmployeeService {
 
     public record EmployeeFilterOptions(
             List<String> grades,
-            List<String> regions
+            List<String> regions,
+            List<String> domains
     ) {
     }
 

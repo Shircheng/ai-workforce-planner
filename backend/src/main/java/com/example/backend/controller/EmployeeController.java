@@ -30,7 +30,6 @@ public class EmployeeController {
             @RequestParam(defaultValue = "all") String availability,
             @RequestParam(defaultValue = "all") String region,
             @RequestParam(defaultValue = "all") String grade,
-            @RequestParam(defaultValue = "all") String status,
             @RequestParam(defaultValue = "all") String role,
             @RequestParam(defaultValue = "all") String domain
     ) {
@@ -41,7 +40,6 @@ public class EmployeeController {
                 availability,
                 region,
                 grade,
-                status,
                 role,
                 domain
         );

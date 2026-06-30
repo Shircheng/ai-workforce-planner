@@ -16,7 +16,7 @@ const defaultFilters: TalentFilters = {
   availability: 'all',
   region: 'all',
   grade: 'all',
-  status: 'all',
+  domain: 'all',
 }
 
 type SelectFilter = {
@@ -38,6 +38,7 @@ type SavedFilter = {
 const fallbackFilterOptions: EmployeeFilterOptions = {
   grades: ['Consultant', 'Senior Consultant', 'Lead Consultant', 'Manager'],
   regions: ['APAC', 'India', 'MENA'],
+  domains: ['Banking', 'Insurance', 'Retail', 'Technology', 'Healthcare', 'Telecommunication', 'Payments', 'Internal Platforms', 'Legacy Platform', 'Media', 'Education', 'Energy', 'Public Sector', 'Financial Services', 'Logistics', 'Travel'],
 }
 
 const uniqueSortedOptions = (values: string[]) => {
@@ -60,13 +61,6 @@ const availabilityOptions = [
   { label: 'Availability: 30 days', value: '30' },
   { label: 'Availability: 60 days', value: '60' },
   { label: 'Availability: 90 days', value: '90' },
-]
-
-const statusOptions = [
-  { label: 'Status: All', value: 'all' },
-  { label: 'Status: Bench + roll-off', value: 'bench_rolloff' },
-  { label: 'Status: Bench', value: 'bench' },
-  { label: 'Status: Roll-off', value: 'rolloff' },
 ]
 
 const createSelectFilters = (
@@ -100,9 +94,15 @@ const createSelectFilters = (
     ],
   },
   {
-    key: 'status',
-    label: 'Status',
-    options: statusOptions,
+    key: 'domain',
+    label: 'Domain',
+    options: [
+      { label: 'Domain: Any', value: 'all' },
+      ...uniqueSortedOptions(filterOptions.domains).map((domain) => ({
+        label: `Domain: ${domain}`,
+        value: domain,
+      })),
+    ],
   },
 ]
 
@@ -132,8 +132,8 @@ const savedFilterSummary = (
     filters.grade !== 'all'
       ? filterLabel('grade', filters.grade, selectFilters)
       : null,
-    filters.status !== 'all'
-      ? filterLabel('status', filters.status, selectFilters)
+    filters.domain !== 'all'
+      ? filterLabel('domain', filters.domain, selectFilters)
       : null,
   ].filter(Boolean)
 
@@ -167,6 +167,7 @@ function TalentExplorerPage() {
       .then((options) => {
         if (isCurrentRequest) {
           const regions = uniqueSortedOptions(options.regions)
+          const domains = uniqueSortedOptions(options.domains ?? [])
 
           setFilterOptions({
             grades:
@@ -177,6 +178,10 @@ function TalentExplorerPage() {
               regions.length > 0
                 ? regions
                 : fallbackFilterOptions.regions,
+            domains:
+              domains.length > 0
+                ? domains
+                : fallbackFilterOptions.domains,
           })
         }
       })
@@ -205,6 +210,21 @@ function TalentExplorerPage() {
       setPage(0)
     }
   }, [filterOptions.regions, filters.region])
+
+  useEffect(() => {
+    if (filters.domain === 'all') {
+      return
+    }
+
+    const availableDomains = new Set(uniqueSortedOptions(filterOptions.domains))
+    if (!availableDomains.has(filters.domain)) {
+      setFilters((currentFilters) => ({
+        ...currentFilters,
+        domain: 'all',
+      }))
+      setPage(0)
+    }
+  }, [filterOptions.domains, filters.domain])
 
   useEffect(() => {
     let isCurrentRequest = true
