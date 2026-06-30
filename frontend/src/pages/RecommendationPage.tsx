@@ -157,6 +157,15 @@ function RecommendationPage() {
           saveLastRecommendationOpportunityId(latestRun?.opportunityId ?? opportunityId)
         } else if (showLatestSavedRecommendationNotice && !latestRun) {
           clearLastRecommendationOpportunityId()
+          setRecommendationRun(null)
+          setSelectedOptionType(null)
+          setOpportunity(null)
+          setRoles([])
+          navigate('/recommendations', {
+            replace: true,
+            state: null,
+          })
+          return
         }
 
         const [loadedOpportunity, loadedRoles] = await Promise.allSettled([
@@ -186,6 +195,20 @@ function RecommendationPage() {
         }
       } catch (loadError) {
         if (active) {
+          if (showLatestSavedRecommendationNotice) {
+            clearLastRecommendationOpportunityId()
+            setError(null)
+            setRecommendationRun(null)
+            setSelectedOptionType(null)
+            setOpportunity(null)
+            setRoles([])
+            navigate('/recommendations', {
+              replace: true,
+              state: null,
+            })
+            return
+          }
+
           setError(errorMessage(loadError))
         }
       } finally {

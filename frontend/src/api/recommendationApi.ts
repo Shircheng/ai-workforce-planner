@@ -6,8 +6,10 @@ import type {
 } from '../types/Recommendation'
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
-).replace(/\/$/, '')
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+)
+  .replace(/\/api\/?$/, '')
+  .replace(/\/$/, '')
 
 type RequestOptions = RequestInit & {
   allowNotFound?: boolean
@@ -27,7 +29,7 @@ async function request<T>(
   path: string,
   { allowNotFound, headers, ...options }: RequestOptions = {},
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}/api${path}`, {
     ...options,
     headers: {
       Accept: 'application/json',
