@@ -1,6 +1,8 @@
 package com.example.backend.service.ai;
 
 import java.net.http.HttpClient;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +40,7 @@ public class OpenAiExplanationClient {
         this(
                 RestClient.builder(),
                 resolveApiKey(environment),
-                model,
+                resolveModel(environment, model),
                 enabled,
                 Duration.ofSeconds(timeoutSeconds <= 0 ? 20 : timeoutSeconds)
         );
@@ -115,13 +117,73 @@ public class OpenAiExplanationClient {
         return model;
     }
 
+    private static String resolveModel(Environment environment, String configuredModel) {
+        String environmentValue = environment == null ? null : environment.getProperty("OPENAI_MODEL");
+        if (StringUtils.hasText(environmentValue)) {
+            return environmentValue.trim();
+        }
+        String systemValue = System.getenv("OPENAI_MODEL");
+        if (StringUtils.hasText(systemValue)) {
+            return systemValue.trim();
+        }
+        String dotenvValue = dotenvValue("OPENAI_MODEL");
+        if (StringUtils.hasText(dotenvValue)) {
+            return dotenvValue.trim();
+        }
+        return configuredModel;
+    }
+
     private static String resolveApiKey(Environment environment) {
         String value = environment == null ? null : environment.getProperty("OPENAI_API_KEY");
         if (StringUtils.hasText(value)) {
             return value.trim();
         }
         String systemValue = System.getenv("OPENAI_API_KEY");
-        return StringUtils.hasText(systemValue) ? systemValue.trim() : null;
+        if (StringUtils.hasText(systemValue)) {
+            return systemValue.trim();
+        }
+        return dotenvValue("OPENAI_API_KEY");
+    }
+
+    private static String dotenvValue(String key) {
+        for (Path path : List.of(Path.of(".env"), Path.of("backend", ".env"))) {
+            String value = dotenvValue(path, key);
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private static String dotenvValue(Path path, String key) {
+        if (!Files.isRegularFile(path)) {
+            return null;
+        }
+        try {
+            for (String line : Files.readAllLines(path)) {
+                String trimmed = line.trim();
+                if (!StringUtils.hasText(trimmed) || trimmed.startsWith("#")) {
+                    continue;
+                }
+                int separator = trimmed.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+                String name = trimmed.substring(0, separator).trim();
+                if (!key.equals(name)) {
+                    continue;
+                }
+                String value = trimmed.substring(separator + 1).trim();
+                if ((value.startsWith("\"") && value.endsWith("\""))
+                        || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                return value;
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        return null;
     }
 
     public record OpenAiExplanationResult(String content, String modelUsed) {

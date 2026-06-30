@@ -1,4 +1,5 @@
 export type NumericValue = number | string | null | undefined
+export type SkillList = string[] | null | undefined
 
 export type RecommendationRunMember = {
   opportunityRoleId?: string
@@ -11,6 +12,13 @@ export type RecommendationRunMember = {
   capabilityFitScore?: NumericValue
   availabilityFitScore?: NumericValue
   overallStaffingScore?: NumericValue
+  locationFitScore?: NumericValue
+  locationFit?: SkillList
+  skillCoverageScore?: NumericValue
+  matchedRequiredSkills?: SkillList
+  missingRequiredSkills?: SkillList
+  matchedDesiredSkills?: SkillList
+  missingDesiredSkills?: SkillList
   availableFteAtStart?: NumericValue
   fteGap?: NumericValue
   earliestFullAvailabilityDate?: string
@@ -25,6 +33,13 @@ export type RecommendationOption = {
   riskLevel?: string
   readinessDays?: number
   selectedMemberCount?: number
+  locationFitScore?: NumericValue
+  locationFit?: SkillList
+  skillCoverageScore?: NumericValue
+  matchedRequiredSkills?: SkillList
+  missingRequiredSkills?: SkillList
+  matchedDesiredSkills?: SkillList
+  missingDesiredSkills?: SkillList
   risks?: string[]
   members?: RecommendationRunMember[]
 }
