@@ -8,6 +8,20 @@ The goal is not to replace human judgement. The goal is to bring together workfo
 
 ---
 
+## Table of Contents
+
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [Docker Compose](#docker-compose)
+- [Core Features](#core-features)
+- [Dataset Usage](#dataset-usage)
+- [API Endpoints](#api-endpoints)
+- [Main Development Priority](#main-development-priority)
+- [Development Notes](#development-notes)
+
+---
+
 ## Tech Stack
 
 ### Frontend
@@ -23,6 +37,13 @@ The goal is not to replace human judgement. The goal is to bring together workfo
 - Spring Boot
 - Java
 - RESTful API architecture
+
+### Analytics
+
+- Python analytics service
+- MongoDB-driven insight APIs
+
+The Python analytics service reads cleaned data from MongoDB and returns summarized analysis results for frontend visualization. 
 
 ### Database
 
@@ -70,6 +91,78 @@ AI-Workforce-Planner/
               service/
         resources/
 ```
+
+---
+
+## Environment Variables
+
+### Frontend
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | `http://localhost:8080` | Spring Boot backend base URL for Talent Explorer and Person Profile APIs |
+| `VITE_BACKEND_API_BASE` | empty string | Backend base URL for EWA and opportunity APIs. Empty uses the Vite `/api` proxy |
+| `VITE_ANALYTICS_API_BASE` | `/python-analysis` | Python analytics API base path through the Vite proxy |
+| `VITE_BACKEND_PROXY_TARGET` | `http://127.0.0.1:8080` | Vite dev-server proxy target for `/api` |
+| `VITE_ANALYTICS_PROXY_TARGET` | `http://127.0.0.1:8000` | Vite dev-server proxy target for `/python-analysis` |
+
+### Backend
+
+These are configured in `backend/src/main/resources/application.properties`.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `spring.mongodb.uri` | `mongodb://localhost:27017/ai-workforce-planner` | MongoDB database connection |
+| `app.import.employee-dataset` | `classpath:data/workforce-dataset.xlsx` | Default Excel dataset location |
+| `app.import.employee-dataset-on-startup` | `true` | Dataset startup import flag |
+| `app.cors.allowed-origins` | `http://localhost:5173` | Allowed frontend origin for backend API calls |
+
+Note: Dataset import is explicit. Employee GET APIs do not auto-import data.
+
+### Python Analytics
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB server URI |
+| `MONGODB_DATABASE` | `ai-workforce-planner` | MongoDB database name |
+
+---
+
+## Docker Compose
+
+Docker Compose can start MongoDB, Spring Boot, Python analytics, and the React frontend together.
+
+```powershell
+docker compose up --build
+```
+
+Service ports:
+
+| Service | URL |
+| --- | --- |
+| Frontend | `http://localhost:5173` |
+| Spring Boot backend | `http://localhost:8080` |
+| Python analytics | `http://127.0.0.1:8000` |
+| MongoDB | `mongodb://localhost:27017` |
+
+After the containers are running, import a dataset from the Dashboard by choosing the Excel file. The frontend uploads it to:
+
+```txt
+POST http://localhost:8080/api/import/workforce-dataset/upload
+```
+
+You can also import the default backend resource directly:
+
+```txt
+POST http://localhost:8080/api/import/workforce-dataset
+```
+
+Docker-specific connection values are already configured in `docker-compose.yml`:
+
+- Backend uses `mongodb://mongodb:27017/ai-workforce-planner`
+- Python analytics uses `mongodb://mongodb:27017`
+- Frontend proxies `/api` to `http://backend:8080`
+- Frontend proxies `/python-analysis` to `http://python-analytics:8000`
 
 ---
 
@@ -271,26 +364,34 @@ For now, complete the basic matching engine that produces the three generated op
 
 ---
 
-### 9. Risk and Gap Analysis
+### 9. Skill Gap and Workforce Forecast Analysis
 
-Highlights risks and gaps based on dataset evidence.
+Shows workforce insights based on data.
 
-Analysis includes:
+Skill gap analysis includes:
 
-- Missing skills
-- People not available by required start date
-- Grade mismatch
-- Location mismatch
-- Low confidence due to missing data
-- Suggested next actions
+- Required skill coverage
+- Priority skill gap
+- Average fit percentage
+- Employees evaluated after filters
+- Ready candidates who match all required skills
+- Grouped insight by region, country, city, role, grade, discipline, domain, availability category, or work mode
 
-Suggested actions may include:
+Workforce forecast includes:
 
-- Reskilling
-- Confirming availability
-- Checking allocation release date
-- Considering external sourcing
-- Escalating to EWA for confirmation
+- Available people across 30, 60, and 90 days
+- Available FTE across 30, 60, and 90 days
+- Forecast grouped by workforce dimensions such as region, role, grade, location, and domain
+
+Opportunity forecast includes:
+
+- Total required FTE from open opportunities
+- Probability-weighted forecast FTE
+- Expected workload in FTE-weeks
+- Demand forecast by time window
+- Skill demand forecast
+
+The analysis pages are insight-only. They should not expose detailed employee profile information unless the user navigates to a dedicated employee view.
 
 ---
 
@@ -310,10 +411,6 @@ The EWA Review Pack includes:
 - Opportunity summary
 - Selected team option
 - Recommended people
-- Reasoning
-- Risks
-- Gaps
-- Suggested next actions
 
 ---
 
@@ -354,6 +451,52 @@ They should be used for validation, analysis, comparison, and demo reporting.
 
 ---
 
+## API Endpoints
+
+### Python Analytics Service
+
+Base URL:
+
+```txt
+http://127.0.0.1:8000
+```
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/health` | Check whether the Python analytics service is running |
+| GET | `/analysis/filter-options` | Return dynamic filter dropdown values from MongoDB distinct values |
+| POST | `/analysis/skill-gap` | Analyze required skill coverage, fit percentage, priority gaps, and ready candidates |
+| POST | `/analysis/workforce-forecast` | Analyze workforce availability across 30, 60, and 90 days |
+| POST | `/analysis/opportunity-forecast` | Analyze opportunity demand, probability-weighted FTE, workload, and skill demand |
+| POST | `/analysis/ewa-summary` | Summarize EWA request status and booking evidence |
+
+### Spring Boot Backend
+
+Base URL:
+
+```txt
+http://localhost:8080/api
+```
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/import/workforce-dataset` | Import the default workforce dataset from backend resources into MongoDB |
+| POST | `/import/workforce-dataset/upload` | Upload and import a workforce Excel file |
+| GET | `/employees` | Search and filter employees |
+| GET | `/employees/{employeeId}` | Fetch one employee by employee ID |
+| GET | `/employees/filter-options` | Return filter options for Talent Explorer |
+| GET | `/employees/{employeeId}/profile` | Fetch employee profile details |
+| GET | `/opportunities/{opportunityId}` | Fetch one opportunity by opportunity ID |
+| GET | `/opportunity-roles/{opportunityRoleId}` | Fetch one opportunity role by role ID |
+| GET | `/opportunity-overlays/{overlayId}` | Fetch one opportunity overlay by overlay ID |
+| POST | `/ewa-requests/submit` | Create new EWA request records for selected candidates |
+
+Dataset import is only triggered through the import endpoints. Employee GET endpoints return the data currently stored in MongoDB.
+
+Frontend development may call Spring Boot through the Vite `/api` proxy. The analysis page calls the Python analytics service for insight and visualization data.
+
+---
+
 ## Main Development Priority
 
 Current priority:
@@ -368,7 +511,6 @@ Current priority:
 7. Build team comparison
 8. Build risk and gap analysis
 9. Build EWA Review Pack
-10. Add selected/custom team option later
 ```
 
 ---

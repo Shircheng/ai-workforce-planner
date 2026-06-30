@@ -14,8 +14,6 @@ import com.example.backend.repository.EmployeeRepository;
 import com.example.backend.repository.EmployeeSkillRepository;
 import com.example.backend.repository.ProfileRepository;
 import com.example.backend.repository.ProjectHistoryRepository;
-import com.example.backend.service.EmployeeExcelImportService;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -30,7 +28,6 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Sort;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,7 +37,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/employees")
-@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"})
 public class EmployeeController {
 
     private final EmployeeRepository employeeRepository;
@@ -50,7 +46,6 @@ public class EmployeeController {
     private final ProjectHistoryRepository projectHistoryRepository;
     private final AllocationRepository allocationRepository;
     private final AvailabilityRepository availabilityRepository;
-    private final EmployeeExcelImportService employeeExcelImportService;
 
     public EmployeeController(
             EmployeeRepository employeeRepository,
@@ -59,8 +54,7 @@ public class EmployeeController {
             ProfileRepository profileRepository,
             ProjectHistoryRepository projectHistoryRepository,
             AllocationRepository allocationRepository,
-            AvailabilityRepository availabilityRepository,
-            EmployeeExcelImportService employeeExcelImportService
+            AvailabilityRepository availabilityRepository
     ) {
         this.employeeRepository = employeeRepository;
         this.employeeSkillRepository = employeeSkillRepository;
@@ -69,7 +63,6 @@ public class EmployeeController {
         this.projectHistoryRepository = projectHistoryRepository;
         this.allocationRepository = allocationRepository;
         this.availabilityRepository = availabilityRepository;
-        this.employeeExcelImportService = employeeExcelImportService;
     }
 
     @GetMapping
@@ -83,9 +76,7 @@ public class EmployeeController {
             @RequestParam(defaultValue = "all") String status,
             @RequestParam(defaultValue = "all") String role,
             @RequestParam(defaultValue = "all") String domain
-    ) throws IOException {
-        seedDatasetIfEmpty();
-
+    ) {
         int pageSize = Math.max(1, Math.min(size, 100));
         int pageIndex = Math.max(page, 0);
         List<Employee> allEmployees = employeeRepository.findAll(Sort.by("employeeName").ascending());
@@ -153,9 +144,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/filter-options")
-    public EmployeeFilterOptions getFilterOptions() throws IOException {
-        seedDatasetIfEmpty();
-
+    public EmployeeFilterOptions getFilterOptions() {
         List<Employee> employees = employeeRepository.findAll();
         Set<String> grades = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         Set<String> regions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -169,9 +158,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{employeeId}/profile")
-    public PersonProfileResponse getPersonProfile(@PathVariable String employeeId) throws IOException {
-        seedDatasetIfEmpty();
-
+    public PersonProfileResponse getPersonProfile(@PathVariable String employeeId) {
         Employee employee = employeeRepository.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
         List<EmployeeSkill> skills = employeeSkillRepository.findByEmployeeId(employeeId);
@@ -331,12 +318,6 @@ public class EmployeeController {
                         item.getNotes()
                 ))
                 .toList();
-    }
-
-    private void seedDatasetIfEmpty() throws IOException {
-        if (employeeRepository.count() == 0) {
-            employeeExcelImportService.importDefaultDataset();
-        }
     }
 
     private boolean matchesSkillSearch(List<EmployeeSkill> employeeSkills, String skillSearch) {

@@ -1,0 +1,202 @@
+.dashboard-page {
+  min-height: calc(100vh - 128px);
+  color: #071327;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.dashboard-header h1 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.dashboard-header p {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: #526174;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.dataset-import-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 420px);
+  gap: 24px;
+  align-items: center;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 22px;
+}
+
+.dataset-import-copy {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dataset-import-icon {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eaf7f2;
+  color: #0f8f6f;
+}
+
+.dataset-import-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.dataset-import-copy h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dataset-import-copy p {
+  margin: 6px 0 0;
+  color: #526174;
+  line-height: 1.5;
+}
+
+.dataset-file-picker {
+  display: flex;
+  min-height: 110px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #9fb0c7;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #071327;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dataset-file-picker:hover {
+  border-color: #2563eb;
+  background: #f3f7ff;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.08);
+}
+
+.dataset-file-picker.is-uploading {
+  cursor: wait;
+  border-color: #14b894;
+  background: #f2fbf8;
+}
+
+.dataset-file-picker input {
+  display: none;
+}
+
+.dataset-picker-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.dataset-picker-main svg {
+  width: 22px;
+  height: 22px;
+  color: #2563eb;
+}
+
+.dataset-picker-sub {
+  color: #526174;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dataset-spinner {
+  animation: dashboard-spin 0.9s linear infinite;
+}
+
+.dashboard-toast {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 30;
+  display: inline-flex;
+  max-width: min(420px, calc(100vw - 32px));
+  align-items: center;
+  gap: 10px;
+  border: 1px solid;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.dashboard-toast-success {
+  border-color: #8ee4c9;
+  color: #08735b;
+}
+
+.dashboard-toast-error {
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.dashboard-toast-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.dashboard-toast button {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.dashboard-toast button:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+@keyframes dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .dataset-import-panel {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 560px) {
+  .dataset-import-copy {
+    align-items: flex-start;
+  }
+
+}

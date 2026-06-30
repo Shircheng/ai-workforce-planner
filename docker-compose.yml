@@ -1,0 +1,53 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/ai-workforce-planner
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  python-analytics:
+    build:
+      context: ./python-analytics
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DATABASE: ai-workforce-planner
+      PYTHON_ANALYTICS_HOST: 0.0.0.0
+      PYTHON_ANALYTICS_PORT: 8000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_PROXY_TARGET: http://backend:8080
+      VITE_ANALYTICS_PROXY_TARGET: http://python-analytics:8000
+      VITE_API_BASE_URL: http://localhost:8080
+    depends_on:
+      - backend
+      - python-analytics
+
+volumes:
+  mongodb_data:

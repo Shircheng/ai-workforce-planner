@@ -3,7 +3,6 @@ package com.example.backend.controller;
 import com.example.backend.dto.ExcelImportResult;
 import com.example.backend.service.EmployeeExcelImportService;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -14,7 +13,6 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/import")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class ExcelImportController {
 
     private final EmployeeExcelImportService employeeExcelImportService;
