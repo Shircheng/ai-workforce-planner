@@ -34,6 +34,33 @@ export type EmployeeFilterOptions = {
   regions: string[]
 }
 
+export type WorkforceDashboardResponse = {
+  metrics: DashboardMetric[]
+  availabilityOutlook: DashboardBar[]
+  supplyByRole: DashboardBar[]
+  topSkills: DashboardBar[]
+  regions: DashboardBar[]
+  demandByDomain: DashboardBar[]
+  alerts: DashboardAlert[]
+}
+
+export type DashboardMetric = {
+  label: string
+  value: number
+  note: string
+}
+
+export type DashboardBar = {
+  label: string
+  value: number
+}
+
+export type DashboardAlert = {
+  title: string
+  message: string
+  tone: 'success' | 'warning' | 'info' | string
+}
+
 export type PersonProfileResponse = {
   summary: PersonProfileSummary
   skills: PersonProfileSkill[]
@@ -172,5 +199,15 @@ export const employeeApi = {
     }
 
     return response.json() as Promise<EmployeeFilterOptions>
+  },
+
+  async getDashboard(): Promise<WorkforceDashboardResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/employees/dashboard`)
+
+    if (!response.ok) {
+      throw new Error('Unable to load dashboard data')
+    }
+
+    return response.json() as Promise<WorkforceDashboardResponse>
   },
 }

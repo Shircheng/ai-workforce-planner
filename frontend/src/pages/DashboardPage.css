@@ -129,6 +129,38 @@
   background: rgba(15, 23, 42, 0.08);
 }
 
+.dashboard-empty-reminder {
+  display: grid;
+  max-width: 560px;
+  gap: 12px;
+  border: 1px dashed #b8c3d4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 28px;
+  color: #526174;
+}
+
+.dashboard-empty-reminder svg {
+  width: 32px;
+  height: 32px;
+  color: #2563eb;
+}
+
+.dashboard-empty-reminder h2 {
+  margin: 0;
+  color: #071327;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.dashboard-empty-reminder p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
 @keyframes dashboard-spin {
   to {
     transform: rotate(360deg);

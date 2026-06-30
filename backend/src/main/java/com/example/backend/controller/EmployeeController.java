@@ -5,6 +5,8 @@ import com.example.backend.entity.Allocation;
 import com.example.backend.entity.Availability;
 import com.example.backend.entity.Employee;
 import com.example.backend.entity.EmployeeSkill;
+import com.example.backend.entity.Opportunity;
+import com.example.backend.entity.OpportunityRole;
 import com.example.backend.entity.Profile;
 import com.example.backend.entity.ProjectHistory;
 import com.example.backend.repository.AllocationRepository;
@@ -12,6 +14,8 @@ import com.example.backend.repository.AvailabilityRepository;
 import com.example.backend.repository.BenchRepository;
 import com.example.backend.repository.EmployeeRepository;
 import com.example.backend.repository.EmployeeSkillRepository;
+import com.example.backend.repository.OpportunityRepository;
+import com.example.backend.repository.OpportunityRoleRepository;
 import com.example.backend.repository.ProfileRepository;
 import com.example.backend.repository.ProjectHistoryRepository;
 import java.math.BigDecimal;
@@ -46,6 +50,8 @@ public class EmployeeController {
     private final ProjectHistoryRepository projectHistoryRepository;
     private final AllocationRepository allocationRepository;
     private final AvailabilityRepository availabilityRepository;
+    private final OpportunityRepository opportunityRepository;
+    private final OpportunityRoleRepository opportunityRoleRepository;
 
     public EmployeeController(
             EmployeeRepository employeeRepository,
@@ -54,7 +60,9 @@ public class EmployeeController {
             ProfileRepository profileRepository,
             ProjectHistoryRepository projectHistoryRepository,
             AllocationRepository allocationRepository,
-            AvailabilityRepository availabilityRepository
+            AvailabilityRepository availabilityRepository,
+            OpportunityRepository opportunityRepository,
+            OpportunityRoleRepository opportunityRoleRepository
     ) {
         this.employeeRepository = employeeRepository;
         this.employeeSkillRepository = employeeSkillRepository;
@@ -63,6 +71,8 @@ public class EmployeeController {
         this.projectHistoryRepository = projectHistoryRepository;
         this.allocationRepository = allocationRepository;
         this.availabilityRepository = availabilityRepository;
+        this.opportunityRepository = opportunityRepository;
+        this.opportunityRoleRepository = opportunityRoleRepository;
     }
 
     @GetMapping
@@ -134,6 +144,65 @@ public class EmployeeController {
         );
     }
 
+    @GetMapping("/dashboard")
+    public WorkforceDashboardResponse getDashboard() {
+        List<Employee> employees = employeeRepository.findAll();
+        List<Opportunity> opportunities = opportunityRepository.findAll();
+        List<OpportunityRole> opportunityRoles = opportunityRoleRepository.findAll();
+
+        if (employees.isEmpty() && opportunities.isEmpty() && opportunityRoles.isEmpty()) {
+            return emptyDashboard();
+        }
+
+        List<String> employeeIds = employees.stream()
+                .map(Employee::getEmployeeId)
+                .filter(Objects::nonNull)
+                .toList();
+        List<EmployeeSkill> employeeSkills = employeeIds.isEmpty()
+                ? List.of()
+                : employeeSkillRepository.findByEmployeeIdIn(employeeIds);
+        Map<String, Bench> benchByEmployee = employeeIds.isEmpty()
+                ? Map.of()
+                : benchRepository.findByEmployeeIdIn(employeeIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        Bench::getEmployeeId,
+                        bench -> bench,
+                        (first, ignored) -> first
+                ));
+        long availableCount = employees.stream()
+                .filter(employee -> isBenchOrAvailable(employee, benchByEmployee.get(employee.getEmployeeId())))
+                .count();
+        long rollingOffCount = employees.stream()
+                .filter(this::isRollingOff)
+                .count();
+        long openRoleCount = opportunityRoles.isEmpty() ? opportunities.size() : opportunityRoles.size();
+
+        return new WorkforceDashboardResponse(
+                dashboardMetrics(employees.size(), availableCount, rollingOffCount, openRoleCount),
+                availabilityOutlook(employees, benchByEmployee),
+                topCounts(employees.stream()
+                        .map(employee -> firstNonBlank(
+                                employee.getRoleArchetype(),
+                                employee.getCurrentRole(),
+                                employee.getDiscipline(),
+                                "Unassigned Role"
+                        ))
+                        .toList(), 5),
+                topSkills(employeeSkills, benchByEmployee),
+                topCounts(employees.stream()
+                        .map(employee -> firstNonBlank(
+                                employee.getRegion(),
+                                employee.getCountry(),
+                                employee.getCity(),
+                                "Unassigned Region"
+                        ))
+                        .toList(), 5),
+                demandByDomain(opportunities, opportunityRoles),
+                dashboardAlerts(availableCount, rollingOffCount, openRoleCount)
+        );
+    }
+
     @GetMapping("/{employeeId}")
     public Employee getEmployee(@PathVariable String employeeId) {
         return employeeRepository.findByEmployeeId(employeeId)
@@ -177,6 +246,173 @@ public class EmployeeController {
                 projectEvidence(projectHistory),
                 availabilityForecast(availability)
         );
+    }
+
+    private WorkforceDashboardResponse emptyDashboard() {
+        return new WorkforceDashboardResponse(
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private List<DashboardMetric> dashboardMetrics(
+            long totalEmployees,
+            long availableCount,
+            long rollingOffCount,
+            long openRoleCount
+    ) {
+        return List.of(
+                new DashboardMetric("Total Workforce", totalEmployees, "Imported employees"),
+                new DashboardMetric("Available Now", availableCount, "Bench or current capacity"),
+                new DashboardMetric("Rolling Off", rollingOffCount, "Release dates tracked"),
+                new DashboardMetric("Open Roles", openRoleCount, "Demand records")
+        );
+    }
+
+    private List<DashboardBar> availabilityOutlook(
+            List<Employee> employees,
+            Map<String, Bench> benchByEmployee
+    ) {
+        long availableNow = 0;
+        long available30 = 0;
+        long available60 = 0;
+        long available90 = 0;
+        long availableLater = 0;
+
+        for (Employee employee : employees) {
+            long daysUntilAvailable = daysUntilAvailable(employee, benchByEmployee.get(employee.getEmployeeId()));
+            if (daysUntilAvailable <= 0) {
+                availableNow++;
+            } else if (daysUntilAvailable <= 30) {
+                available30++;
+            } else if (daysUntilAvailable <= 60) {
+                available60++;
+            } else if (daysUntilAvailable <= 90) {
+                available90++;
+            } else {
+                availableLater++;
+            }
+        }
+
+        return List.of(
+                new DashboardBar("Now", availableNow),
+                new DashboardBar("30 days", available30),
+                new DashboardBar("60 days", available60),
+                new DashboardBar("90 days", available90),
+                new DashboardBar("90+ days", availableLater)
+        );
+    }
+
+    private List<DashboardBar> topSkills(
+            List<EmployeeSkill> employeeSkills,
+            Map<String, Bench> benchByEmployee
+    ) {
+        List<String> skillNames = new ArrayList<>(employeeSkills.stream()
+                .map(EmployeeSkill::getSkillName)
+                .filter(Objects::nonNull)
+                .toList());
+
+        if (skillNames.isEmpty()) {
+            benchByEmployee.values().stream()
+                    .map(Bench::getTopSkills)
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .forEach(skillNames::add);
+        }
+
+        return topCounts(skillNames, 8);
+    }
+
+    private List<DashboardBar> demandByDomain(
+            List<Opportunity> opportunities,
+            List<OpportunityRole> opportunityRoles
+    ) {
+        List<String> domains = new ArrayList<>();
+        opportunities.stream()
+                .map(Opportunity::getDomain)
+                .filter(Objects::nonNull)
+                .forEach(domains::add);
+        opportunityRoles.stream()
+                .map(role -> firstNonBlank(
+                        role.getDomainExperienceRequired(),
+                        role.getDisciplineOrDepartment()
+                ))
+                .filter(value -> !value.isBlank())
+                .forEach(domains::add);
+
+        return topCounts(domains, 5);
+    }
+
+    private List<DashboardAlert> dashboardAlerts(
+            long availableCount,
+            long rollingOffCount,
+            long openRoleCount
+    ) {
+        List<DashboardAlert> alerts = new ArrayList<>();
+
+        if (availableCount > 0) {
+            alerts.add(new DashboardAlert(
+                    "Available capacity",
+                    availableCount + " people are currently available or listed on bench.",
+                    "success"
+            ));
+        }
+
+        if (openRoleCount > availableCount && openRoleCount > 0) {
+            alerts.add(new DashboardAlert(
+                    "Demand exceeds available capacity",
+                    openRoleCount + " open roles are competing for " + availableCount + " available people.",
+                    "warning"
+            ));
+        } else if (openRoleCount > 0) {
+            alerts.add(new DashboardAlert(
+                    "Demand coverage available",
+                    "Current available capacity can cover the open role count.",
+                    "info"
+            ));
+        }
+
+        if (rollingOffCount > 0) {
+            alerts.add(new DashboardAlert(
+                    "Upcoming roll-offs",
+                    rollingOffCount + " people have release dates that can support near-term planning.",
+                    "info"
+            ));
+        }
+
+        if (alerts.isEmpty()) {
+            alerts.add(new DashboardAlert(
+                    "Dataset imported",
+                    "Dashboard metrics are ready for workforce planning.",
+                    "info"
+            ));
+        }
+
+        return alerts.stream().limit(3).toList();
+    }
+
+    private List<DashboardBar> topCounts(List<String> values, int limit) {
+        return values.stream()
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.groupingBy(value -> value, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .sorted((first, second) -> {
+                    int countComparison = Long.compare(second.getValue(), first.getValue());
+                    if (countComparison != 0) {
+                        return countComparison;
+                    }
+                    return first.getKey().compareToIgnoreCase(second.getKey());
+                })
+                .limit(limit)
+                .map(entry -> new DashboardBar(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     private PersonProfileSummary profileSummary(
@@ -761,6 +997,37 @@ public class EmployeeController {
                 .filter(term -> !term.isBlank())
                 .distinct()
                 .toList();
+    }
+
+    public record WorkforceDashboardResponse(
+            List<DashboardMetric> metrics,
+            List<DashboardBar> availabilityOutlook,
+            List<DashboardBar> supplyByRole,
+            List<DashboardBar> topSkills,
+            List<DashboardBar> regions,
+            List<DashboardBar> demandByDomain,
+            List<DashboardAlert> alerts
+    ) {
+    }
+
+    public record DashboardMetric(
+            String label,
+            long value,
+            String note
+    ) {
+    }
+
+    public record DashboardBar(
+            String label,
+            long value
+    ) {
+    }
+
+    public record DashboardAlert(
+            String title,
+            String message,
+            String tone
+    ) {
     }
 
     public record EmployeePageResponse(
