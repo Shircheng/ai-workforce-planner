@@ -90,3 +90,35 @@
   color: #991b1b;
   padding: 12px;
 }
+
+.analysis-empty-state {
+  max-width: 560px;
+  border: 1px dashed #bfd0e8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  padding: 30px;
+}
+
+.analysis-empty-state svg {
+  width: 32px;
+  height: 32px;
+  color: #3b5bff;
+}
+
+.analysis-empty-state h2 {
+  margin: 18px 0 0;
+  color: #071327;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.analysis-empty-state p {
+  max-width: 440px;
+  margin: 12px 0 0;
+  color: #41516a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+}

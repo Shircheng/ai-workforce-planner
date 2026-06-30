@@ -18,6 +18,7 @@ import type {
   WorkforceForecastResponse,
 } from '../../../api/analysisApi'
 import { analysisApi } from '../../../api/analysisApi'
+import AnalysisEmptyState from '../shared/AnalysisEmptyState'
 import AnalysisHeader from '../shared/AnalysisHeader'
 import {
   compactFilters,
@@ -74,6 +75,11 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
     () => buildGroupedForecastRows(forecastRows),
     [forecastRows],
   )
+  const hasNoData =
+    !isLoading &&
+    !error &&
+    result !== null &&
+    (result.totalEmployeesEvaluated === 0 || forecastRows.length === 0)
 
   useEffect(() => {
     void runForecast()
@@ -121,59 +127,65 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
       <AnalysisHeader
         title="Workforce Forecast"
         eyebrow="Availability planning"
-        metaItems={[
-          `${horizonDays.join('/')} days`,
-          `Group: ${labelize(groupBy)}`,
-          ...activeFilterLabels,
-        ]}
+        metaItems={
+          hasNoData
+            ? []
+            : [
+                `${horizonDays.join('/')} days`,
+                `Group: ${labelize(groupBy)}`,
+                ...activeFilterLabels,
+              ]
+        }
       />
 
-      <section className="analysis-command-card" aria-label="Forecast controls">
-        <div className="analysis-command-bar analysis-command-bar-forecast">
-          <label className="analysis-field">
-            <span>As of date</span>
-            <input
-              type="date"
-              value={asOfDate}
-              onChange={(event) => setAsOfDate(event.target.value)}
-            />
-          </label>
+      {!hasNoData ? (
+        <section className="analysis-command-card" aria-label="Forecast controls">
+          <div className="analysis-command-bar analysis-command-bar-forecast">
+            <label className="analysis-field">
+              <span>As of date</span>
+              <input
+                type="date"
+                value={asOfDate}
+                onChange={(event) => setAsOfDate(event.target.value)}
+              />
+            </label>
 
-          <label className="analysis-skill-input">
-            <span>Horizons</span>
-            <input
-              value={horizons}
-              onChange={(event) => setHorizons(event.target.value)}
-              placeholder="30, 60, 90"
-            />
-          </label>
+            <label className="analysis-skill-input">
+              <span>Horizons</span>
+              <input
+                value={horizons}
+                onChange={(event) => setHorizons(event.target.value)}
+                placeholder="30, 60, 90"
+              />
+            </label>
 
-          <button
-            className="analysis-icon-button"
-            type="button"
-            onClick={() => setIsFilterOpen((current) => !current)}
-            title="Filters"
-            aria-label="Filters"
-          >
-            <SlidersHorizontal size={17} aria-hidden="true" />
-            {activeFilterCount > 0 ? (
-              <span className="analysis-filter-count">{activeFilterCount}</span>
-            ) : null}
-          </button>
+            <button
+              className="analysis-icon-button"
+              type="button"
+              onClick={() => setIsFilterOpen((current) => !current)}
+              title="Filters"
+              aria-label="Filters"
+            >
+              <SlidersHorizontal size={17} aria-hidden="true" />
+              {activeFilterCount > 0 ? (
+                <span className="analysis-filter-count">{activeFilterCount}</span>
+              ) : null}
+            </button>
 
-          <button
-            className="analysis-run-button"
-            type="button"
-            onClick={() => void runForecast()}
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} aria-hidden="true" />
-            <span>{isLoading ? 'Running' : 'Run'}</span>
-          </button>
-        </div>
-      </section>
+            <button
+              className="analysis-run-button"
+              type="button"
+              onClick={() => void runForecast()}
+              disabled={isLoading}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              <span>{isLoading ? 'Running' : 'Run'}</span>
+            </button>
+          </div>
+        </section>
+      ) : null}
 
-      {isFilterOpen ? (
+      {!hasNoData && isFilterOpen ? (
         <ForecastFilterPanel
           filterOptions={filterOptions}
           filters={filters}
@@ -188,28 +200,37 @@ function WorkforceForecastView({ filterOptions }: WorkforceForecastViewProps) {
 
       {error ? <div className="analysis-error">{error}</div> : null}
 
-      <section
-        className="analysis-overview analysis-forecast-overview"
-        aria-label="Forecast summary"
-      >
-        {forecastRows.map((item) => (
-          <ForecastKpi
-            key={item.horizonDays}
-            label={`${item.horizonDays}-day availability`}
-            value={item.availableEmployeeCount}
-            detail={`${item.totalAvailableFte} FTE - cutoff ${item.cutoffDate}`}
-          />
-        ))}
-      </section>
-
-      <section className="analysis-dashboard-grid">
-        <ForecastTrendPanel forecast={forecastRows} />
-        <GroupedForecastPanel
-          groupBy={groupBy}
-          rows={groupedForecastRows}
-          horizons={forecastRows.map((item) => item.horizonDays)}
+      {hasNoData ? (
+        <AnalysisEmptyState
+          title="No workforce forecast data yet"
+          message="Import your workforce Excel dataset from the Dashboard, then run the workforce forecast again."
         />
-      </section>
+      ) : (
+        <>
+          <section
+            className="analysis-overview analysis-forecast-overview"
+            aria-label="Forecast summary"
+          >
+            {forecastRows.map((item) => (
+              <ForecastKpi
+                key={item.horizonDays}
+                label={`${item.horizonDays}-day availability`}
+                value={item.availableEmployeeCount}
+                detail={`${item.totalAvailableFte} FTE - cutoff ${item.cutoffDate}`}
+              />
+            ))}
+          </section>
+
+          <section className="analysis-dashboard-grid">
+            <ForecastTrendPanel forecast={forecastRows} />
+            <GroupedForecastPanel
+              groupBy={groupBy}
+              rows={groupedForecastRows}
+              horizons={forecastRows.map((item) => item.horizonDays)}
+            />
+          </section>
+        </>
+      )}
     </>
   )
 }
