@@ -1,3 +1,5 @@
+import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
+
 export type TalentExplorerEmployee = {
   employeeId: string
   initials: string
@@ -154,60 +156,60 @@ export type PersonAvailability = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+})
+
+function normalizeRequestError(error: unknown, fallbackMessage: string) {
+  if (error instanceof AxiosError) {
+    if (!error.response && error.message === 'Network Error') {
+      return new Error('Failed to fetch')
+    }
+    return new Error(fallbackMessage)
+  }
+  return error
+}
+
+async function getJson<T>(path: string, fallbackMessage: string, config?: AxiosRequestConfig): Promise<T> {
+  try {
+    const response = await apiClient.get<T>(path, config)
+    return response.data
+  } catch (error) {
+    throw normalizeRequestError(error, fallbackMessage)
+  }
+}
+
 export const employeeApi = {
   async getTalentPage(
     page: number,
     size = 10,
     filters: TalentFilters,
   ): Promise<EmployeePageResponse> {
-    const params = new URLSearchParams({
-      page: String(page),
-      size: String(size),
-      skillSearch: filters.skillSearch,
-      availability: filters.availability,
-      region: filters.region,
-      grade: filters.grade,
-      status: filters.status,
+    return getJson<EmployeePageResponse>('/api/employees', 'Unable to load talent data', {
+      params: {
+        page: String(page),
+        size: String(size),
+        skillSearch: filters.skillSearch,
+        availability: filters.availability,
+        region: filters.region,
+        grade: filters.grade,
+        status: filters.status,
+      },
     })
-
-    const response = await fetch(`${API_BASE_URL}/api/employees?${params}`)
-
-    if (!response.ok) {
-      throw new Error('Unable to load talent data')
-    }
-
-    return response.json() as Promise<EmployeePageResponse>
   },
 
   async getPersonProfile(employeeId: string): Promise<PersonProfileResponse> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/employees/${encodeURIComponent(employeeId)}/profile`,
+    return getJson<PersonProfileResponse>(
+      `/api/employees/${encodeURIComponent(employeeId)}/profile`,
+      'Unable to load person profile',
     )
-
-    if (!response.ok) {
-      throw new Error('Unable to load person profile')
-    }
-
-    return response.json() as Promise<PersonProfileResponse>
   },
 
   async getFilterOptions(): Promise<EmployeeFilterOptions> {
-    const response = await fetch(`${API_BASE_URL}/api/employees/filter-options`)
-
-    if (!response.ok) {
-      throw new Error('Unable to load filter options')
-    }
-
-    return response.json() as Promise<EmployeeFilterOptions>
+    return getJson<EmployeeFilterOptions>('/api/employees/filter-options', 'Unable to load filter options')
   },
 
   async getDashboard(): Promise<WorkforceDashboardResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/employees/dashboard`)
-
-    if (!response.ok) {
-      throw new Error('Unable to load dashboard data')
-    }
-
-    return response.json() as Promise<WorkforceDashboardResponse>
+    return getJson<WorkforceDashboardResponse>('/api/employees/dashboard', 'Unable to load dashboard data')
   },
 }

@@ -1,48 +1,35 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import AnalysisPage from '../pages/AnalysisPage'
 import DashboardPage from '../pages/DashboardPage'
 import EwaReviewPackPage from '../pages/EwaReviewPackPage'
 import OpportunityIntakePage from '../pages/OpportunityIntakePage'
-import OpportunityListPage from '../pages/OpportunityListPage'
 import PersonProfilePage from '../pages/PersonProfilePage'
 import RecommendationPage from '../pages/RecommendationPage'
 import TalentExplorerPage from '../pages/TalentExplorerPage'
 
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <DashboardPage /> },
+      { path: '/talent', element: <TalentExplorerPage /> },
+      { path: '/people/:id', element: <PersonProfilePage /> },
+      { path: '/people/:id/recommendation', element: <PersonProfilePage /> },
+      { path: '/opportunities/new', element: <OpportunityIntakePage /> },
+      { path: '/team-comparison', element: <PageHeader title="Team Comparison" />},
+      { path: '/forecast', element: <PageHeader title="Forecast" />},
+      { path: '/opportunities/:id/recommendations', element: <RecommendationPage /> },
+      { path: '/ewa/:id', element: <EwaReviewPackPage /> },
+      { path: '/analysis', element: <AnalysisPage />},
+      { path: '/ewa/:id', element: <EwaReviewPackPage />},
+    ],
+  },
+])
+
 function AppRoutes() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/talent" element={<TalentExplorerPage />} />
-          <Route path="/people/:id" element={<PersonProfilePage />} />
-          <Route
-            path="/people/:id/recommendation"
-            element={<PersonProfilePage />}
-          />
-          <Route
-            path="/opportunities/new"
-            element={<OpportunityIntakePage />}
-          />
-          <Route path="/opportunities" element={<OpportunityListPage />} />
-          <Route
-            path="/team-comparison"
-            element={<PageHeader title="Team Comparison" />}
-          />
-          <Route path="/forecast" element={<PageHeader title="Forecast" />} />
-          <Route
-            path="/opportunities/:id/recommendations"
-            element={<RecommendationPage />}
-          />
-          <Route path="/ewa" element={<EwaReviewPackPage />} />
-          <Route path="/analysis" element={<AnalysisPage />} />
-          <Route path="/ewa/:id" element={<EwaReviewPackPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  )
+  return <RouterProvider router={router} />
 }
 
 export default AppRoutes

@@ -1,0 +1,391 @@
+.parsed-panel {
+  border: 1px solid #dde1e7;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+
+.parsed-panel h2 {
+  color: #111827;
+  font-size: 20px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.parsed-panel p {
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
+.empty-panel-title {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+}
+
+.error-panel {
+  border-color: #f3b6b6;
+  background: #fff5f5;
+}
+
+.eyebrow {
+  color: #51606f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.parsed-header,
+.role-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.validation-list,
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.validation-item {
+  border: 1px solid #dde1e7;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+}
+
+.validation-item.warning {
+  background: #fff9ec;
+  border-color: #f2ca7e;
+}
+
+.validation-item.error {
+  background: #fff5f5;
+  border-color: #f3b6b6;
+}
+
+.primary-button {
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.primary-button:disabled {
+  background: #91a7ad;
+  cursor: not-allowed;
+}
+
+.generate-action {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.parsed-panel .generate-blocked-message {
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.stored-note {
+  border: 1px solid #a7d9b7;
+  border-radius: 8px;
+  background: #eaf7ef;
+  color: #166534;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+}
+
+.stored-note strong {
+  font-size: 14px;
+}
+
+.stored-note span {
+  font-size: 13px;
+}
+
+.brief-box {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #344054;
+  padding: 12px;
+}
+
+.brief-box strong {
+  color: #111827;
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.brief-box p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.requirement-overview {
+  border: 1px solid #dde1e7;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.requirement-overview h3 {
+  color: #111827;
+  font-size: 20px;
+  margin: 0;
+}
+
+.overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overview-section h4 {
+  color: #111827;
+  font-size: 16px;
+  margin: 0;
+}
+
+.overview-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.overview-chip {
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #10233f;
+  display: inline-flex;
+  font-size: 13px;
+  line-height: 1.2;
+  padding: 7px 10px;
+}
+
+.overview-chip.role-chip {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+}
+
+.overview-chip.required-skill-chip {
+  background: #eaf7ef;
+  border: 1px solid #a7d9b7;
+  color: #166534;
+}
+
+.overview-chip.desired-skill-chip {
+  background: #eef2f7;
+  color: #10233f;
+}
+
+.constraint-chip-row {
+  gap: 10px;
+}
+
+.overview-chip.constraint-chip {
+  border: 1px solid #d9e2ec;
+  background: #ffffff;
+  color: #243447;
+}
+
+.overview-chip.constraint-chip.domain {
+  background: #eef7ff;
+  border-color: #c9e4ff;
+  color: #165a96;
+}
+
+.overview-chip.constraint-chip.location {
+  background: #eefaf3;
+  border-color: #bde9cf;
+  color: #17633b;
+}
+
+.overview-chip.constraint-chip.timing {
+  background: #fff7e8;
+  border-color: #f4d59a;
+  color: #9a3412;
+}
+
+.overview-chip.constraint-chip.flexibility {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #4c1d95;
+}
+
+.role-card {
+  border: 1px solid #dde1e7;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.role-card h3 {
+  color: #111827;
+  font-size: 18px;
+  margin: 0;
+}
+
+.role-card-header span {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+
+.tag.required {
+  background: #eaf7ef;
+  border-color: #a7d9b7;
+  color: #166534;
+}
+
+.role-warning-list {
+  background: #fff5f5;
+  border: 1px solid #f3b6b6;
+  border-radius: 8px;
+  color: #9a3412;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+}
+
+.role-warning-list p {
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.role-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.role-meta dt {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.role-meta dd {
+  color: #111827;
+  margin: 2px 0 0;
+}
+
+.role-notes {
+  border-top: 1px solid #eef2f6;
+  padding-top: 10px;
+}
+
+@media (max-width: 960px) {
+  .role-meta {
+    grid-template-columns: 1fr;
+  }
+}
+.loading-panel {
+  min-height: 220px;
+}
+
+.preview-loading-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.preview-loading-header h2 {
+  margin-top: 0;
+}
+
+.preview-spinner {
+  animation: preview-spin 0.8s linear infinite;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  height: 28px;
+  margin-top: 2px;
+  width: 28px;
+}
+
+.preview-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.preview-skeleton {
+  animation: preview-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 50%, #eef2f7 100%);
+  background-size: 220% 100%;
+  border-radius: 8px;
+  display: block;
+  height: 18px;
+  width: 72%;
+}
+
+.preview-skeleton.wide {
+  width: 100%;
+}
+
+.preview-skeleton.short {
+  width: 46%;
+}
+
+@keyframes preview-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes preview-pulse {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}

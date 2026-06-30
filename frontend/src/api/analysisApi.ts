@@ -1,5 +1,14 @@
+import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
+
 const ANALYTICS_BASE_URL =
   import.meta.env.VITE_ANALYTICS_API_BASE ?? '/python-analysis'
+
+const analyticsClient = axios.create({
+  baseURL: ANALYTICS_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
 
 export type FilterOptions = {
   employeeGroupByOptions: string[]
@@ -157,21 +166,31 @@ export type OpportunityForecastResponse = {
   opportunities: OpportunityForecastRow[]
 }
 
-async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${ANALYTICS_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  })
-
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `Request failed with ${response.status}`)
+function normalizeRequestError(error: unknown) {
+  if (error instanceof AxiosError) {
+    const responseData = error.response?.data
+    if (typeof responseData === 'string' && responseData.trim()) {
+      return new Error(responseData)
+    }
+    if (responseData) {
+      return new Error(JSON.stringify(responseData))
+    }
+    return new Error(error.message === 'Network Error' ? 'Failed to fetch' : error.message)
   }
+  return error
+}
 
-  return response.json() as Promise<T>
+async function requestJson<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
+  try {
+    const response = await analyticsClient.request<T>({
+      url: path,
+      method: 'GET',
+      ...config,
+    })
+    return response.data
+  } catch (error) {
+    throw normalizeRequestError(error)
+  }
 }
 
 export const analysisApi = {
@@ -182,21 +201,21 @@ export const analysisApi = {
   skillGap(payload: SkillGapRequest) {
     return requestJson<SkillGapResponse>('/analysis/skill-gap', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      data: payload,
     })
   },
 
   workforceForecast(payload: WorkforceForecastRequest) {
     return requestJson<WorkforceForecastResponse>('/analysis/workforce-forecast', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      data: payload,
     })
   },
 
   opportunityForecast(payload: OpportunityForecastRequest) {
     return requestJson<OpportunityForecastResponse>('/analysis/opportunity-forecast', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      data: payload,
     })
   },
 }

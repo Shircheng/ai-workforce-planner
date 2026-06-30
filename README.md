@@ -30,13 +30,19 @@ The goal is not to replace human judgement. The goal is to bring together workfo
 - TypeScript
 - Vite
 - React Router
-- Axios
+- Zod for form validation
+- Axios to fetch API for backend requests
+- Component-level CSS for page and feature styling
 
 ### Backend
 
 - Spring Boot
 - Java
+- Jakarta Bean Validation with `@Valid`
+- Lombok DTO/entity helpers
+- Jackson `ObjectMapper` for OpenAI JSON parsing
 - RESTful API architecture
+- OpenAI Responses API for opportunity requirement parsing, with a local fallback parser when OpenAI is unavailable
 
 ### Analytics
 
@@ -62,7 +68,6 @@ AI-Workforce-Planner/
   frontend/
     src/
       api/
-      assets/
       components/
         common/
         layout/
@@ -71,51 +76,56 @@ AI-Workforce-Planner/
         opportunity/
         recommendation/
         ewa/
-      data/
+        analysis/
+        opportunity/
+      constants/
+      hooks/
       pages/
       routes/
       types/
       utils/
+      validation/
 
   backend/
     src/
       main/
         java/
           com/
-            aiworkforceplanner/
-              config/
-              controller/
-              dto/
-              model/
-              repository/
-              service/
+            example/
+              backend/
+                config/
+                controller/
+                dto/
+                entity/
+                repository/
+                service/
         resources/
 ```
 
 ---
-
 ## Environment Variables
 
 ### Frontend
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://localhost:8080` | Spring Boot backend base URL for Talent Explorer and Person Profile APIs |
-| `VITE_BACKEND_API_BASE` | empty string | Backend base URL for EWA and opportunity APIs. Empty uses the Vite `/api` proxy |
-| `VITE_ANALYTICS_API_BASE` | `/python-analysis` | Python analytics API base path through the Vite proxy |
-| `VITE_BACKEND_PROXY_TARGET` | `http://127.0.0.1:8080` | Vite dev-server proxy target for `/api` |
-| `VITE_ANALYTICS_PROXY_TARGET` | `http://127.0.0.1:8000` | Vite dev-server proxy target for `/python-analysis` |
+| `VITE_API_BASE_URL` | `http://localhost:8080` | Spring Boot backend origin used by employee, import, opportunity, ewa, and recommendation APIs. Frontend calls paths such as `/api/opportunities/parse`. |
+| `VITE_ANALYTICS_API_BASE` | `/python-analysis` | Python analytics API base path through the Vite proxy. |
+| `VITE_BACKEND_PROXY_TARGET` | `http://127.0.0.1:8080` | Vite dev-server proxy target for `/api`. |
+| `VITE_ANALYTICS_PROXY_TARGET` | `http://127.0.0.1:8000` | Vite dev-server proxy target for `/python-analysis`. |
 
 ### Backend
 
-These are configured in `backend/src/main/resources/application.properties`.
+These are configured in `backend/src/main/resources/application.properties` and can be overridden with environment variables.
 
-| Property | Default | Purpose |
+| Property / Variable | Default | Purpose |
 | --- | --- | --- |
-| `spring.mongodb.uri` | `mongodb://localhost:27017/ai-workforce-planner` | MongoDB database connection |
-| `app.import.employee-dataset` | `classpath:data/workforce-dataset.xlsx` | Default Excel dataset location |
-| `app.import.employee-dataset-on-startup` | `true` | Dataset startup import flag |
-| `app.cors.allowed-origins` | `http://localhost:5173` | Allowed frontend origin for backend API calls |
+| `spring.mongodb.uri` / `SPRING_MONGODB_URI` | `mongodb://localhost:27017/ai-workforce-planner` | MongoDB database connection. |
+| `app.import.employee-dataset` | `classpath:data/workforce-dataset.xlsx` | Default Excel dataset location. |
+| `app.import.employee-dataset-on-startup` | `true` | Dataset startup import flag. |
+| `app.cors.allowed-origins` | `http://localhost:5173` | Allowed frontend origin for backend API calls. |
+| `openai.api-key` / `OPENAI_API_KEY` | empty when configured safely | OpenAI API key for opportunity parsing. Do not commit real keys. |
+| `openai.model` / `OPENAI_MODEL` | project configured model | OpenAI model used by opportunity parsing. |
 
 Note: Dataset import is explicit. Employee GET APIs do not auto-import data.
 
@@ -240,60 +250,49 @@ Shows everything in Basic Profile Mode, plus opportunity-specific recommendation
 
 Allows users to create a staffing opportunity using natural language and structured fields.
 
-Example input:
+The current intake flow is:
 
-```txt
-Need 4 people for a banking modernization project in UK.
-Skills: React, Java, AWS, QA Automation.
-Start in 30 days.
-```
+1. User fills required business fields and writes an opportunity statement.
+2. User clicks **Parse requirements**.
+3. Frontend validates required fields with Zod before calling the backend.
+4. Backend parses or infers opportunity roles and role requirements using OpenAI when available. A local fallback parser provides basic extraction for roles, known skills, grade preferences, FTE, split-candidate wording, domain, location preference, and selected flexibility notes.
+5. User reviews the validated preview and role cards.
+6. User clicks **Generate options**.
+7. The opportunity and opportunity roles are saved to MongoDB, then the app navigates to the Recommendation page.
 
-Opportunity fields may include:
+The opportunity is **not saved** during parsing. It is saved only after the user confirms **Generate options**.
 
+Required intake fields:
+
+- Opportunity statement
+- Opportunity brief
 - Opportunity name
-- Client/account
+- Client name
 - Domain
-- Project type
-- Region/country
-- Work mode
-- Start date
-- Duration
-- Team size
-- Required roles
-- Required skills
-- Optional skills
-- Required grade/seniority
-- Priority
-- Notes
+- Country
+- Expected start date
+- Duration weeks
+- Probability
+- Commercial priority
 
-After the user generates options:
+Optional intake fields:
 
-- Opportunity details are saved
-- Generated recommendation options are saved
-- User is navigated to the Recommendation page
+- Client type
+- Region
+- City
+- Timezone preference
 
----
+Current parsing and validation behavior:
 
-### 5. Opportunity List
-
-Stores and displays all created opportunities.
-
-Each opportunity can contain:
-
-- Opportunity details
-- Required roles
-- Required skills
-- Generated recommendation options
-- Selected option, when available
-- Risk level
-- Confidence score
-- Status
-
-The Opportunity List helps users reopen previous opportunities and review generated staffing options.
+- Form fields are authoritative when they conflict with statement text.
+- Opportunity IDs and Opportunity role IDs are generated from the latest MongoDB opportunity/ opportunity role number, such as `OPP-005`, `OPR-0061`.
+- Role generation is blocked when role name, grade preference, required skills, or desired skills are incomplete.
+- Delivery risk is inferred by OpenAI when available and defaults to `Medium` when missing.
+- Role priority is normalized to `High`, `Medium`, or `Low`, falling back to commercial priority and then `Medium`.
 
 ---
 
-### 6. Recommendation Engine
+### 5. Recommendation Engine
 
 The first implementation focuses on generating three basic team options.
 
@@ -331,7 +330,7 @@ Project Relevance    5%
 
 ---
 
-### 7. Team Comparison
+### 6. Team Comparison
 
 Compares generated staffing options side by side.
 
@@ -349,22 +348,7 @@ The first version should compare the three generated options only.
 
 ---
 
-### 8. Selected / Custom Option
-
-This feature is pending.
-
-Planned future behavior:
-
-- Show selected/custom option
-- Allow user to select one generated option as a base
-- Allow add/remove/replace employee
-- Recalculate confidence score, skill coverage, availability readiness, risks, and missing skills
-
-For now, complete the basic matching engine that produces the three generated options first.
-
----
-
-### 9. Skill Gap and Workforce Forecast Analysis
+### 7. Skill Gap and Workforce Forecast Analysis
 
 Shows workforce insights based on data.
 
@@ -395,7 +379,7 @@ The analysis pages are insight-only. They should not expose detailed employee pr
 
 ---
 
-### 10. EWA Review Pack
+### 8. EWA Review Pack
 
 Generates the final recommendation summary for EWA review.
 
@@ -486,6 +470,8 @@ http://localhost:8080/api
 | GET | `/employees/{employeeId}` | Fetch one employee by employee ID |
 | GET | `/employees/filter-options` | Return filter options for Talent Explorer |
 | GET | `/employees/{employeeId}/profile` | Fetch employee profile details |
+| POST | `/opportunities/parse` | Parse and validate an opportunity intake request. This returns a preview and does not save the opportunity. |
+| POST | `/opportunities/generate-options` | Save the parsed opportunity and opportunity roles, then provide recommendation. |
 | GET | `/opportunities/{opportunityId}` | Fetch one opportunity by opportunity ID |
 | GET | `/opportunity-roles/{opportunityRoleId}` | Fetch one opportunity role by role ID |
 | GET | `/opportunity-overlays/{overlayId}` | Fetch one opportunity overlay by overlay ID |
@@ -505,9 +491,8 @@ Current priority:
 1. Load dataset into MongoDB
 2. Build base frontend pages
 3. Build Talent Explorer and Person Profile
-4. Build Opportunity Intake and Opportunity List
-5. Build basic matching engine
-6. Generate three recommendation options
+4. Build Opportunity Intake and Requirement Parsing
+6. Build recommendation option generation
 7. Build team comparison
 8. Build risk and gap analysis
 9. Build EWA Review Pack
