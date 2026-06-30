@@ -12,6 +12,7 @@ The goal is not to replace human judgement. The goal is to bring together workfo
 
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Architecture Flow](#architecture-flow)
 - [Environment Variables](#environment-variables)
 - [Docker Compose](#docker-compose)
 - [Core Features](#core-features)
@@ -103,6 +104,113 @@ AI-Workforce-Planner/
 ```
 
 ---
+
+## Architecture Flow
+
+The application is split into a React frontend, a Spring Boot backend, a Python analytics service, MongoDB, and optional OpenAI-assisted parsing/explanation.
+
+```mermaid
+flowchart TB
+    User["Workforce Planner / Sales / Delivery User"]
+
+    subgraph Frontend["React + Vite Frontend"]
+        FrontendRoutes["Frontend routes"]
+        Dashboard["Workforce Dashboard"]
+        Talent["Talent Explorer + Person Profile"]
+        Intake["Opportunity Intake"]
+        Recs["Recommendations + Team Comparison"]
+        Analysis["Skill Gap + Forecast Analysis"]
+        Ewa["EWA Review Pack"]
+    end
+
+    subgraph Backend["Spring Boot Backend"]
+        BackendRoutes["/api"]
+        ImportApi["Import APIs"]
+        EmployeeApi["Employee/Profile APIs"]
+        OpportunityApi["Opportunity APIs"]
+        RecommendationApi["Recommendation Run APIs"]
+        EwaApi["EWA APIs"]
+        ParsingService["Opportunity Parsing Service"]
+        MatchingService["Recommendation Generation Service"]
+        ExplanationEvidence["AI Explanation Evidence Builder"]
+    end
+
+    subgraph Analytics["Python Analytics Service"]
+        SkillGap["Skill Gap Analysis"]
+        Forecast["Workforce + Opportunity Forecast"]
+        EwaSummary["EWA Summary"]
+    end
+
+    subgraph Data["MongoDB"]
+        WorkforceData["Employee, Skills, Availability, Allocation, Bench, Profile, Project History"]
+        OpportunityData["Opportunity + OpportunityRole"]
+        GeneratedData["OpportunityOverlay + RecommendationRun"]
+        ValidationData["EwaRequest"]
+    end
+
+    OpenAI["OpenAI Responses API"]
+    Excel["workforce-dataset.xlsx"]
+
+    User --> FrontendRoutes
+    FrontendRoutes --> Dashboard
+    FrontendRoutes --> Talent
+    FrontendRoutes --> Intake
+    FrontendRoutes --> Recs
+    FrontendRoutes --> Analysis
+    FrontendRoutes --> Ewa
+
+    Dashboard --> BackendRoutes
+    Talent --> BackendRoutes
+    Intake --> BackendRoutes
+    Recs --> BackendRoutes
+    Ewa --> BackendRoutes
+    Analysis --> SkillGap
+    Analysis --> Forecast
+    Analysis --> EwaSummary
+
+    BackendRoutes --> ImportApi
+    BackendRoutes --> EmployeeApi
+    BackendRoutes --> OpportunityApi
+    BackendRoutes --> RecommendationApi
+    BackendRoutes --> EwaApi
+
+    Excel --> ImportApi
+    ImportApi --> WorkforceData
+    EmployeeApi --> WorkforceData
+
+    OpportunityApi --> ParsingService
+    ParsingService -.-> OpenAI
+    ParsingService --> OpportunityData
+
+    RecommendationApi --> MatchingService
+    MatchingService --> WorkforceData
+    MatchingService --> OpportunityData
+    MatchingService --> GeneratedData
+
+    RecommendationApi --> ExplanationEvidence
+    ExplanationEvidence --> WorkforceData
+    ExplanationEvidence --> GeneratedData
+
+    SkillGap --> WorkforceData
+    SkillGap --> OpportunityData
+    Forecast --> WorkforceData
+    Forecast --> OpportunityData
+    EwaSummary --> ValidationData
+
+    EwaApi --> ValidationData
+```
+
+Main data flow:
+
+1. Workforce Excel data is imported into MongoDB.
+2. Users search workforce data from Talent Explorer and Dashboard.
+3. Opportunity Intake parses role requirements, then saves `Opportunity` and `OpportunityRole`.
+4. Recommendation generation reads the saved opportunity, roles, and workforce scoring inputs, generates `OpportunityOverlay`, builds three team options, and saves a `RecommendationRun`.
+5. Recommendation pages read the latest saved run, compare options, and prepare selected candidates for EWA.
+6. Python analytics reads MongoDB directly for skill gap, forecast, and EWA summary insights.
+
+---
+
 ## Environment Variables
 
 ### Frontend
@@ -294,39 +402,173 @@ Current parsing and validation behavior:
 
 ### 5. Recommendation Engine
 
-The first implementation focuses on generating three basic team options.
+Generates evidence-backed staffing options for a saved opportunity.
+
+The engine is rule-based and auditable. AI may later generate explanation text, but the matching score itself is calculated in backend code.
+
+Current generation flow:
+
+1. Fetch the saved `Opportunity` and related `OpportunityRole` records.
+2. Load scoring inputs from MongoDB: `Employee`, `EmployeeSkill`, `Availability`, `Profile`, and `ProjectHistory`.
+3. Score every employee against every opportunity role.
+4. For each role, select up to 3 generated `OpportunityOverlay` candidates.
+5. Build 3 team options from the generated overlays.
+6. Save the full result to `RecommendationRun` with `explanationStatus = PENDING_AI_INTEGRATION`.
+7. The latest saved run can be fetched by opportunity ID and can later be updated with AI explanation status/content.
 
 Generated options:
 
 1. **Best Skill Fit**
-   - Prioritizes strongest skill and experience match.
+   - Sorts role candidates by capability fit first, then overall staffing score, then availability.
 
 2. **Fastest Available Team**
-   - Prioritizes employees available now or soonest.
+   - Sorts role candidates by availability fit first, then earliest full availability date, then overall staffing score.
 
 3. **Balanced Low-Risk Team**
-   - Balances skills, availability, grade, location, and delivery risk.
-
-The engine recommends suitable people based on:
-
-- Skills
-- Availability
-- Grade
-- Location
-- Domain experience
-- Relevant project experience
-
-Candidate scoring logic:
+   - Sorts role candidates using a balanced score:
 
 ```txt
-Candidate Score =
-Skills Match        35%
-Availability Fit    25%
-Domain Experience   15%
-Grade Fit           10%
-Location Fit        10%
-Project Relevance    5%
+Balanced sort score =
+overallStaffingScore * 70%
++ availabilityFitScore * 20%
+- memberRiskScore * 10%
 ```
+
+Team construction rules:
+
+- If a role cannot combine candidates, the option selects the top sorted candidate for that role.
+- If a role can combine candidates, the option adds sorted candidates until required FTE is covered, while respecting minimum individual FTE.
+- The same employee is not reused across multiple roles inside the same option.
+- If two generated options have the same team, the engine tries to swap one role with an acceptable alternative. The alternative must have availability score at least 70, capability within 15 points, option score within 15 points, and risk increase no more than 20 points.
+
+Candidate scoring uses these main formulas:
+
+```txt
+requiredCoverage = matched required skills / total required skills * 100
+desiredCoverage  = matched desired skills / total desired skills * 100
+
+skillLevelScore  = average matched skill level / 5 * 100
+experienceScore  = average matched years experience / 8 * 100
+
+skillStrength =
+skillLevelScore * 65%
++ experienceScore * 35%
+```
+
+`5` is the maximum skill level in the dataset. `8` is used as the experience cap for scoring so very senior experience does not over-dominate the match.
+
+```txt
+capabilityRawScore =
+30
++ requiredCoverageRatio * 35
++ desiredCoverageRatio * 15
++ skillStrength * 5%
++ gradeScore * 10%
++ domainScore * 5%
++ locationScore * 5%
++ projectRelevanceScore * 5%
+
+capabilityFitScore = min(capabilityRawScore, 100)
+
+overallStaffingScore =
+capabilityFitScore * 70%
++ availabilityFitScore * 30%
+```
+
+The capability score is clamped to `0-100`.
+
+Availability scoring:
+
+```txt
+availabilityFitScore =
+available FTE at role start / required role FTE * 100
+```
+
+The score is capped at `100`. FTE gap is calculated as:
+
+```txt
+fteGap = required role FTE - available FTE at start
+```
+
+Grade scoring:
+
+```txt
+Exact grade match       = 100
+1 level difference      = 80
+2 level difference      = 65
+Larger level difference = 50
+Unknown grade data      = 70
+Text mismatch fallback  = 60
+```
+
+Location scoring:
+
+```txt
+City match                  = 100
+Country match               = 85
+Region match                = 70
+Remote acceptable + remote  = 65
+Remote employee fallback    = 55
+No location match           = 40
+No target location supplied = 75
+```
+
+Domain and project scoring:
+
+- Domain score compares the opportunity/role target domain against employee primary domain, secondary domain, profile domain summary, and project history domains.
+- Project relevance starts at `35`, adds `18` for each project domain hit, `6` for each project technology/method hit, and `2` for each direct employee skill hit. It is capped at `100`.
+
+Team-level skill coverage:
+
+```txt
+teamSkillCoverageScore =
+required skill coverage * 70%
++ desired skill coverage * 30%
+```
+
+If a role has only required or only desired skills, the available category receives the full effective weight. The recommendation run stores both team-level and member-level:
+
+- `matchedRequiredSkills`
+- `missingRequiredSkills`
+- `matchedDesiredSkills`
+- `missingDesiredSkills`
+- `skillCoverageScore`
+
+Team-level location fit:
+
+```txt
+locationFitScore = average member locationScore
+locationFit      = unique selected member countries
+```
+
+Risk scoring:
+
+```txt
+availabilityRisk = average(fteGap / (available FTE at start + fteGap) * 100)
+readinessRisk    = readinessDays / 90 * 100, capped at 100
+confidenceRisk   = 100 - confidenceScore
+constraintRisk   = members with blocking constraints / selected members * 100
+
+riskScore =
+availabilityRisk * 50%
++ readinessRisk * 25%
++ confidenceRisk * 15%
++ constraintRisk * 10%
+```
+
+Risk level:
+
+```txt
+0-30   LOW
+31-75  MEDIUM
+76-100 HIGH
+```
+
+Saved recommendation run data includes:
+
+- Recommendation run ID, opportunity ID/name, generated timestamp, overlay count, and explanation status
+- Three options with confidence score, risk score, risk level, readiness days, selected member count, team skill coverage, team location fit, matched/missing team skills, risks, and members
+- Each member with role, employee, rank, fit status, capability score, availability score, overall score, skill coverage, matched/missing skills, FTE at start, FTE gap, earliest full availability date, rationale, and constraint
 
 ---
 
@@ -344,7 +586,6 @@ Comparison areas:
 - Confidence score
 - Missing capabilities
 
-The first version should compare the three generated options only.
 
 ---
 
@@ -396,42 +637,6 @@ The EWA Review Pack includes:
 - Selected team option
 - Recommended people
 
----
-
-## Dataset Usage
-
-The dataset contains both input data and expected/desired output data.
-
-### Input Data
-
-Used by the matching engine:
-
-- Employee
-- EmployeeSkill
-- SkillCatalog
-- Availability
-- Allocation
-- Bench
-- Profile
-- ProjectHistory
-- Opportunity
-- OpportunityRole
-
-### Expected / Validation Data
-
-Loaded into MongoDB first so other members can build analysis features without waiting for the matching engine.
-
-- OpportunityOverlay
-- EwaRequest
-
-These records can be used later to validate or compare recommendation results.
-
-Important rule:
-
-```txt
-OpportunityOverlay and EwaRequest should not be used as normal matching input.
-They should be used for validation, analysis, comparison, and demo reporting.
-```
 
 ---
 
@@ -480,38 +685,3 @@ http://localhost:8080/api
 Dataset import is only triggered through the import endpoints. Employee GET endpoints return the data currently stored in MongoDB.
 
 Frontend development may call Spring Boot through the Vite `/api` proxy. The analysis page calls the Python analytics service for insight and visualization data.
-
----
-
-## Main Development Priority
-
-Current priority:
-
-```txt
-1. Load dataset into MongoDB
-2. Build base frontend pages
-3. Build Talent Explorer and Person Profile
-4. Build Opportunity Intake and Requirement Parsing
-6. Build recommendation option generation
-7. Build team comparison
-8. Build risk and gap analysis
-9. Build EWA Review Pack
-```
-
----
-
-## Development Notes
-
-This application should prioritize explainability.
-
-Every recommendation should be supported by evidence such as:
-
-- Matched skills
-- Availability fit
-- Domain experience
-- Project history
-- Grade fit
-- Location fit
-- Risks and gaps
-
-The recommendation engine should be transparent and rule-based for the MVP. AI may assist with parsing and explanation, but the scoring logic should remain understandable and auditable.
