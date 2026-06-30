@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,11 @@ public class RecommendationRunMember {
     private BigDecimal capabilityFitScore;
     private BigDecimal availabilityFitScore;
     private BigDecimal overallStaffingScore;
+    private BigDecimal skillCoverageScore;
+    private List<String> matchedRequiredSkills;
+    private List<String> missingRequiredSkills;
+    private List<String> matchedDesiredSkills;
+    private List<String> missingDesiredSkills;
     private BigDecimal availableFteAtStart;
     private BigDecimal fteGap;
     private LocalDate earliestFullAvailabilityDate;

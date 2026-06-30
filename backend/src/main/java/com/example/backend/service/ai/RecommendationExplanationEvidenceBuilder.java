@@ -131,10 +131,12 @@ public class RecommendationExplanationEvidenceBuilder {
             members.add(buildMember(run, member, role, overlays));
         }
 
-        List<String> missingSkills = members.stream()
-                .flatMap(member -> member.missingRequiredSkills().stream())
-                .distinct()
-                .toList();
+        List<String> missingSkills = safeList(option.getMissingRequiredSkills()).isEmpty()
+                ? members.stream()
+                        .flatMap(member -> member.missingRequiredSkills().stream())
+                        .distinct()
+                        .toList()
+                : safeList(option.getMissingRequiredSkills());
 
         return new OptionEvidence(
                 optionId,

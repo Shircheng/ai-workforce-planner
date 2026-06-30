@@ -19,6 +19,13 @@ public class RecommendationOptionDto {
     private String riskLevel;
     private Integer readinessDays;
     private Integer selectedMemberCount;
+    private BigDecimal locationFitScore;
+    private List<String> locationFit;
+    private BigDecimal skillCoverageScore;
+    private List<String> matchedRequiredSkills;
+    private List<String> missingRequiredSkills;
+    private List<String> matchedDesiredSkills;
+    private List<String> missingDesiredSkills;
     private List<String> risks;
     private List<RecommendationOptionMemberDto> members;
 }
