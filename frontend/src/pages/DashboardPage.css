@@ -25,103 +25,51 @@
   line-height: 1.55;
 }
 
-.dataset-import-panel {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 420px);
-  gap: 24px;
-  align-items: center;
-  border: 1px solid #d7deea;
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 22px;
-}
-
-.dataset-import-copy {
+.dashboard-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-end;
 }
 
-.dataset-import-icon {
-  display: inline-flex;
-  width: 52px;
-  height: 52px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: #eaf7f2;
-  color: #0f8f6f;
-}
-
-.dataset-import-icon svg {
-  width: 26px;
-  height: 26px;
-}
-
-.dataset-import-copy h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.dataset-import-copy p {
-  margin: 6px 0 0;
-  color: #526174;
-  line-height: 1.5;
-}
-
-.dataset-file-picker {
-  display: flex;
-  min-height: 110px;
-  cursor: pointer;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px dashed #9fb0c7;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #071327;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.dataset-file-picker:hover {
-  border-color: #2563eb;
-  background: #f3f7ff;
-  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.08);
-}
-
-.dataset-file-picker.is-uploading {
-  cursor: wait;
-  border-color: #14b894;
-  background: #f2fbf8;
-}
-
-.dataset-file-picker input {
+.dataset-file-input {
   display: none;
 }
 
-.dataset-picker-main {
+.dataset-import-button {
   display: inline-flex;
+  height: 44px;
+  cursor: pointer;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  font-size: 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 15px;
   font-weight: 800;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.dataset-picker-main svg {
-  width: 22px;
-  height: 22px;
-  color: #2563eb;
+.dataset-import-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px);
 }
 
-.dataset-picker-sub {
-  color: #526174;
-  font-size: 13px;
-  font-weight: 600;
+.dataset-import-button:disabled {
+  cursor: wait;
+  opacity: 0.76;
+}
+
+.dataset-import-button svg {
+  width: 19px;
+  height: 19px;
 }
 
 .dataset-spinner {
@@ -188,15 +136,17 @@
 }
 
 @media (max-width: 900px) {
-  .dataset-import-panel {
-    grid-template-columns: 1fr;
+  .dashboard-header {
+    flex-direction: column;
   }
 
-}
+  .dashboard-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 
-@media (max-width: 560px) {
-  .dataset-import-copy {
-    align-items: flex-start;
+  .dataset-import-button {
+    width: 100%;
   }
 
 }
