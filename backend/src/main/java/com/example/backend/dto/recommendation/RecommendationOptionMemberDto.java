@@ -24,6 +24,8 @@ public class RecommendationOptionMemberDto {
     private BigDecimal capabilityFitScore;
     private BigDecimal availabilityFitScore;
     private BigDecimal overallStaffingScore;
+    private BigDecimal locationFitScore;
+    private List<String> locationFit;
     private BigDecimal skillCoverageScore;
     private List<String> matchedRequiredSkills;
     private List<String> missingRequiredSkills;
