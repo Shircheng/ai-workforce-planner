@@ -112,94 +112,35 @@ AI-Workforce-Planner/
 The application is split into a React frontend, a Spring Boot backend, a Python analytics service, MongoDB, and optional OpenAI-assisted parsing/explanation.
 
 ```mermaid
-flowchart TB
+%%{init: {"flowchart": {"curve": "linear"}} }%%
+flowchart LR
     User["Workforce Planner / Sales / Delivery User"]
 
     subgraph Frontend["React + Vite Frontend"]
-        FrontendRoutes["Frontend routes"]
-        Dashboard["Workforce Dashboard"]
-        Talent["Talent Explorer + Person Profile"]
-        Intake["Opportunity Intake"]
-        Recs["Recommendations + Team Comparison"]
-        Analysis["Skill Gap + Forecast Analysis"]
-        Ewa["EWA Review Pack"]
+        FrontendApp["Dashboard, Talent Explorer, Opportunity Intake, Recommendations, Analysis, EWA"]
     end
 
     subgraph Backend["Spring Boot Backend"]
-        BackendRoutes["/api"]
-        ImportApi["Import APIs"]
-        EmployeeApi["Employee/Profile APIs"]
-        OpportunityApi["Opportunity APIs"]
-        RecommendationApi["Recommendation Run APIs"]
-        EwaApi["EWA APIs"]
-        ParsingService["Opportunity Parsing Service"]
-        MatchingService["Recommendation Generation Service"]
-        ExplanationEvidence["AI Explanation Evidence Builder"]
+        BackendApi["/api REST controllers"]
+        BackendServices["Import, Employee/Profile, Opportunity, Recommendation, EWA services"]
     end
 
     subgraph Analytics["Python Analytics Service"]
-        SkillGap["Skill Gap Analysis"]
-        Forecast["Workforce + Opportunity Forecast"]
-        EwaSummary["EWA Summary"]
+        AnalyticsApi["Skill Gap, Forecast, EWA Summary APIs"]
     end
 
-    subgraph Data["MongoDB"]
-        WorkforceData["Employee, Skills, Availability, Allocation, Bench, Profile, Project History"]
-        OpportunityData["Opportunity + OpportunityRole"]
-        GeneratedData["OpportunityOverlay + RecommendationRun"]
-        ValidationData["EwaRequest"]
-    end
-
+    Mongo["MongoDB"]
     OpenAI["OpenAI Responses API"]
     Excel["workforce-dataset.xlsx"]
 
-    User --> FrontendRoutes
-    FrontendRoutes --> Dashboard
-    FrontendRoutes --> Talent
-    FrontendRoutes --> Intake
-    FrontendRoutes --> Recs
-    FrontendRoutes --> Analysis
-    FrontendRoutes --> Ewa
-
-    Dashboard --> BackendRoutes
-    Talent --> BackendRoutes
-    Intake --> BackendRoutes
-    Recs --> BackendRoutes
-    Ewa --> BackendRoutes
-    Analysis --> SkillGap
-    Analysis --> Forecast
-    Analysis --> EwaSummary
-
-    BackendRoutes --> ImportApi
-    BackendRoutes --> EmployeeApi
-    BackendRoutes --> OpportunityApi
-    BackendRoutes --> RecommendationApi
-    BackendRoutes --> EwaApi
-
-    Excel --> ImportApi
-    ImportApi --> WorkforceData
-    EmployeeApi --> WorkforceData
-
-    OpportunityApi --> ParsingService
-    ParsingService -.-> OpenAI
-    ParsingService --> OpportunityData
-
-    RecommendationApi --> MatchingService
-    MatchingService --> WorkforceData
-    MatchingService --> OpportunityData
-    MatchingService --> GeneratedData
-
-    RecommendationApi --> ExplanationEvidence
-    ExplanationEvidence --> WorkforceData
-    ExplanationEvidence --> GeneratedData
-
-    SkillGap --> WorkforceData
-    SkillGap --> OpportunityData
-    Forecast --> WorkforceData
-    Forecast --> OpportunityData
-    EwaSummary --> ValidationData
-
-    EwaApi --> ValidationData
+    User --> FrontendApp
+    FrontendApp --> BackendApi
+    FrontendApp --> AnalyticsApi
+    BackendApi --> BackendServices
+    Excel --> BackendServices
+    BackendServices <--> Mongo
+    AnalyticsApi --> Mongo
+    BackendServices -. parsing and explanations .-> OpenAI
 ```
 
 Main data flow:
@@ -210,6 +151,13 @@ Main data flow:
 4. Recommendation generation reads the saved opportunity, roles, and workforce scoring inputs, generates `OpportunityOverlay`, builds three team options, and saves a `RecommendationRun`.
 5. Recommendation pages read the latest saved run, compare options, and prepare selected candidates for EWA.
 6. Python analytics reads MongoDB directly for skill gap, forecast, and EWA summary insights.
+
+MongoDB stores these main data groups:
+
+- Workforce collections: Employee, EmployeeSkill, SkillCatalog, Availability, Allocation, Bench, Profile, ProjectHistory
+- Opportunity collections: Opportunity, OpportunityRole
+- Recommendation collections: OpportunityOverlay, RecommendationRun
+- EWA collections: EwaRequest
 
 ---
 
