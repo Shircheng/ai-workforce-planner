@@ -13,10 +13,27 @@
 }
 
 .sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #1f2937;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   margin-bottom: 24px;
+  white-space: nowrap;
+}
+
+.sidebar-title-icon {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #bde8e4;
+  border-radius: 8px;
+  background: #f0fdfa;
+  color: #0f766e;
+  box-shadow: inset 0 1px 0 #ffffff;
 }
 
 .sidebar-nav {

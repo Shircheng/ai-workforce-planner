@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bookmark, Heart, Trash2, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import PageHeader from '../components/common/PageHeader'
 import {
   employeeApi,
   type EmployeeFilterOptions,
@@ -341,9 +342,7 @@ function TalentExplorerPage() {
     <section className="min-h-[calc(100vh-69px)] text-slate-950">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-[34px] font-extrabold leading-tight tracking-normal text-slate-950">
-            Talent Explorer
-          </h1>
+          <PageHeader title="Talent Explorer" />
           <p className="mt-2 text-[18px] leading-7 text-slate-500">
             Search profiles by skill, role, grade, location, domain, and availability.
           </p>

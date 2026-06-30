@@ -20,6 +20,7 @@ const router = createBrowserRouter([
       { path: '/opportunities/new', element: <OpportunityIntakePage /> },
       { path: '/team-comparison', element: <PageHeader title="Team Comparison" />},
       { path: '/forecast', element: <PageHeader title="Forecast" />},
+      { path: '/recommendations', element: <RecommendationPage /> },
       { path: '/opportunities/:id/recommendations', element: <RecommendationPage /> },
       { path: '/ewa', element: <EwaReviewPackPage /> },
       { path: '/analysis', element: <AnalysisPage />},
