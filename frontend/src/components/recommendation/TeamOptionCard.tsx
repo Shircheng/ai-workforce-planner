@@ -74,8 +74,8 @@ function TeamOptionCard({
             <small>Confidence</small>
           </div>
           <div className="risk-summary">
-            <small>Risk</small>
             <RiskBadge riskLevel={option.riskLevel} />
+            <small>Risk</small>
           </div>
         </div>
 

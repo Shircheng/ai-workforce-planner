@@ -31,13 +31,11 @@ function OpportunityDetailsCard({
   totalFte,
 }: OpportunityDetailsCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const location = [
-    opportunity?.city,
-    opportunity?.country,
+  const location = formatLocation([
     opportunity?.region,
-  ]
-    .filter(Boolean)
-    .join(', ')
+    opportunity?.country,
+    opportunity?.city,
+  ])
   const opportunityName =
     opportunity?.opportunityName ??
     recommendationRun?.opportunityName ??
@@ -300,6 +298,25 @@ function normalizedList(items?: string[] | null) {
     .filter((item): item is string => Boolean(item)) ?? []
 
   return Array.from(new Set(values))
+}
+
+function formatLocation(parts: Array<string | undefined | null>) {
+  const values: string[] = []
+
+  parts.forEach((part) => {
+    const value = part?.trim()
+    if (value && !isUnknown(value)) {
+      values.push(value)
+    }
+  })
+
+  return Array.from(new Set(values)).join(', ')
+}
+
+function isUnknown(value: string) {
+  return ['unknown', 'unkown', 'n/a', 'na', 'none', '-'].includes(
+    value.trim().toLowerCase(),
+  )
 }
 
 export default OpportunityDetailsCard
