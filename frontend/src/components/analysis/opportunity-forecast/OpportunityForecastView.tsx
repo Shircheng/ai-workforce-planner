@@ -19,6 +19,7 @@ import type {
   OpportunitySkillDemandRow,
 } from '../../../api/analysisApi'
 import { analysisApi } from '../../../api/analysisApi'
+import AnalysisEmptyState from '../shared/AnalysisEmptyState'
 import AnalysisHeader from '../shared/AnalysisHeader'
 import { chartColors } from '../shared/analysisModel'
 
@@ -84,88 +85,109 @@ function OpportunityForecastView() {
   const fallbackWindowDays = Math.max(...horizonDays, 0)
   const forecastWindowDays = summary?.forecastWindowDays ?? fallbackWindowDays
   const forecastWindowWeeks = summary?.forecastWindowWeeks ?? Number((fallbackWindowDays / 7).toFixed(1))
+  const hasNoData =
+    !isLoading &&
+    !error &&
+    result !== null &&
+    ((summary?.totalOpportunities ?? 0) === 0 || result.skillDemand.length === 0)
+  const hasAnalysisData = result !== null && !hasNoData
 
   return (
     <>
       <AnalysisHeader
         title="Opportunity Forecast"
         eyebrow="Pipeline demand planning"
-        metaItems={[
-          `${summary?.totalOpportunities ?? 0} opportunities`,
-          `${horizonDays.length} windows`,
-        ]}
+        metaItems={
+          !hasAnalysisData
+            ? []
+            : [
+                `${summary?.totalOpportunities ?? 0} opportunities`,
+                `${horizonDays.length} windows`,
+              ]
+        }
       />
 
-      <section className="analysis-command-card" aria-label="Opportunity forecast controls">
-        <div className="analysis-command-bar analysis-opportunity-command-bar">
-          <label className="analysis-field">
-            <span>As of date</span>
-            <input
-              type="date"
-              value={asOfDate}
-              onChange={(event) => setAsOfDate(event.target.value)}
-            />
-          </label>
+      {hasAnalysisData ? (
+        <section className="analysis-command-card" aria-label="Opportunity forecast controls">
+          <div className="analysis-command-bar analysis-opportunity-command-bar">
+            <label className="analysis-field">
+              <span>As of date</span>
+              <input
+                type="date"
+                value={asOfDate}
+                onChange={(event) => setAsOfDate(event.target.value)}
+              />
+            </label>
 
-          <label className="analysis-skill-input">
-            <span>Forecast windows</span>
-            <input
-              value={horizons}
-              onChange={(event) => setHorizons(event.target.value)}
-              placeholder="30, 60, 90"
-            />
-          </label>
+            <label className="analysis-skill-input">
+              <span>Forecast windows</span>
+              <input
+                value={horizons}
+                onChange={(event) => setHorizons(event.target.value)}
+                placeholder="30, 60, 90"
+              />
+            </label>
 
-          <button
-            className="analysis-run-button"
-            type="button"
-            onClick={() => void runForecast()}
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} aria-hidden="true" />
-            <span>{isLoading ? 'Running' : 'Run'}</span>
-          </button>
-        </div>
-      </section>
+            <button
+              className="analysis-run-button"
+              type="button"
+              onClick={() => void runForecast()}
+              disabled={isLoading}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              <span>{isLoading ? 'Running' : 'Run'}</span>
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {error ? <div className="analysis-error">{error}</div> : null}
 
-      <section
-        className="analysis-overview analysis-opportunity-summary"
-        aria-label="Opportunity forecast summary"
-      >
-        <OpportunityMetric label="Total Required" value={`${summary?.totalRequiredFte ?? 0} FTE`} />
-        <OpportunityMetric
-          label="Probability Forecast"
-          value={`${summary?.probabilityForecastFte ?? 0} FTE`}
+      {hasNoData ? (
+        <AnalysisEmptyState
+          title="No opportunity forecast data yet"
+          message="Import opportunity and role data from the Dashboard, then run the opportunity forecast again."
         />
-        <OpportunityMetric
-          label="Expected Workload"
-          value={`${summary?.expectedWorkloadFteWeeks ?? 0}`}
-          detail={
-            summary
-              ? `FTE-weeks over ${forecastWindowDays} days (${forecastWindowWeeks} weeks)`
-              : 'FTE-weeks'
-          }
-        />
-        <OpportunityMetric
-          label="High Priority"
-          value={`${summary?.highPriorityOpportunities ?? 0} opportunities`}
-        />
-        <OpportunityMetric
-          label="High Risk Demand"
-          value={`${summary?.highRiskDemandFte ?? 0} FTE`}
-        />
-        <OpportunityMetric
-          label="Top Skill"
-          value={summary ? `${summary.topSkillName}: ${summary.topSkillForecastFte} FTE` : '-'}
-        />
-      </section>
+      ) : hasAnalysisData ? (
+        <>
+          <section
+            className="analysis-overview analysis-opportunity-summary"
+            aria-label="Opportunity forecast summary"
+          >
+            <OpportunityMetric label="Total Required" value={`${summary?.totalRequiredFte ?? 0} FTE`} />
+            <OpportunityMetric
+              label="Probability Forecast"
+              value={`${summary?.probabilityForecastFte ?? 0} FTE`}
+            />
+            <OpportunityMetric
+              label="Expected Workload"
+              value={`${summary?.expectedWorkloadFteWeeks ?? 0}`}
+              detail={
+                summary
+                  ? `FTE-weeks over ${forecastWindowDays} days (${forecastWindowWeeks} weeks)`
+                  : 'FTE-weeks'
+              }
+            />
+            <OpportunityMetric
+              label="High Priority"
+              value={`${summary?.highPriorityOpportunities ?? 0} opportunities`}
+            />
+            <OpportunityMetric
+              label="High Risk Demand"
+              value={`${summary?.highRiskDemandFte ?? 0} FTE`}
+            />
+            <OpportunityMetric
+              label="Top Skill"
+              value={summary ? `${summary.topSkillName}: ${summary.topSkillForecastFte} FTE` : '-'}
+            />
+          </section>
 
-      <section className="analysis-opportunity-visual-grid">
-        <DemandWindowPanel rows={result?.demandWindows ?? []} />
-        <SkillDemandPanel rows={result?.skillDemand ?? []} />
-      </section>
+          <section className="analysis-opportunity-visual-grid">
+            <DemandWindowPanel rows={result?.demandWindows ?? []} />
+            <SkillDemandPanel rows={result?.skillDemand ?? []} />
+          </section>
+        </>
+      ) : null}
     </>
   )
 }

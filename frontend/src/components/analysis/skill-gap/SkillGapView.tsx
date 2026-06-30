@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FilterOptions, SkillGapResponse } from '../../../api/analysisApi'
 import { analysisApi } from '../../../api/analysisApi'
 import AnalysisControls from '../shared/AnalysisControls'
+import AnalysisEmptyState from '../shared/AnalysisEmptyState'
 import AnalysisFilterPanel from '../shared/AnalysisFilterPanel'
 import AnalysisHeader from '../shared/AnalysisHeader'
 import AnalysisSummary from '../shared/AnalysisSummary'
@@ -59,6 +60,12 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
 
   const lowestCoverageSkill = sortedSkillGaps[0]
   const activeFilterCount = Object.values(filters).filter(Boolean).length
+  const hasNoData =
+    !isLoading &&
+    !error &&
+    result !== null &&
+    (result.totalEmployeesEvaluated === 0 || result.skillGaps.length === 0)
+  const hasAnalysisData = result !== null && !hasNoData
 
   useEffect(() => {
     void runSkillGap()
@@ -106,24 +113,30 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
       <AnalysisHeader
         title="Skill Gap Analysis"
         eyebrow="Capability coverage"
-        metaItems={[
-          `${skillNames.length} skills`,
-          `Level ${minSkillLevel}+`,
-          `Group: ${labelize(groupBy)}`,
-          ...(filters.skillCategory ? [filters.skillCategory] : []),
-        ]}
+        metaItems={
+          !hasAnalysisData
+            ? []
+            : [
+                `${skillNames.length} skills`,
+                `Level ${minSkillLevel}+`,
+                `Group: ${labelize(groupBy)}`,
+                ...(filters.skillCategory ? [filters.skillCategory] : []),
+              ]
+        }
       />
 
-      <AnalysisControls
-        requiredSkills={requiredSkills}
-        activeFilterCount={activeFilterCount}
-        isLoading={isLoading}
-        onRequiredSkillsChange={setRequiredSkills}
-        onToggleFilters={() => setIsFilterOpen((current) => !current)}
-        onRun={() => void runSkillGap()}
-      />
+      {hasAnalysisData ? (
+        <AnalysisControls
+          requiredSkills={requiredSkills}
+          activeFilterCount={activeFilterCount}
+          isLoading={isLoading}
+          onRequiredSkillsChange={setRequiredSkills}
+          onToggleFilters={() => setIsFilterOpen((current) => !current)}
+          onRun={() => void runSkillGap()}
+        />
+      ) : null}
 
-      {isFilterOpen ? (
+      {hasAnalysisData && isFilterOpen ? (
         <AnalysisFilterPanel
           filterOptions={filterOptions}
           filters={filters}
@@ -140,29 +153,38 @@ function SkillGapView({ filterOptions }: SkillGapViewProps) {
 
       {error ? <div className="analysis-error">{error}</div> : null}
 
-      <AnalysisSummary
-        averageFitPercentage={result?.averageFitPercentage ?? 0}
-        employeesEvaluated={result?.totalEmployeesEvaluated ?? 0}
-        priorityGap={lowestCoverageSkill}
-        readyCandidateCount={result?.readyCandidateCount ?? 0}
-      />
-
-      <section className="analysis-dashboard-grid">
-        <SkillCoveragePanel skillGaps={result?.skillGaps ?? []} />
-        <PriorityGapsPanel skillGaps={sortedSkillGaps} />
-      </section>
-
-      <section className="analysis-lower-grid">
-        <GroupCoveragePanel
-          groupBy={groupBy}
-          rows={groupedCoverageRows}
-          skillNames={skillNames}
+      {hasNoData ? (
+        <AnalysisEmptyState
+          title="No skill gap data yet"
+          message="Import your workforce Excel dataset from the Dashboard, then run the skill gap analysis again."
         />
-        <GroupedInsightPanel
-          groupBy={groupBy}
-          insights={result?.groupedInsights ?? []}
-        />
-      </section>
+      ) : hasAnalysisData ? (
+        <>
+          <AnalysisSummary
+            averageFitPercentage={result?.averageFitPercentage ?? 0}
+            employeesEvaluated={result?.totalEmployeesEvaluated ?? 0}
+            priorityGap={lowestCoverageSkill}
+            readyCandidateCount={result?.readyCandidateCount ?? 0}
+          />
+
+          <section className="analysis-dashboard-grid">
+            <SkillCoveragePanel skillGaps={result?.skillGaps ?? []} />
+            <PriorityGapsPanel skillGaps={sortedSkillGaps} />
+          </section>
+
+          <section className="analysis-lower-grid">
+            <GroupCoveragePanel
+              groupBy={groupBy}
+              rows={groupedCoverageRows}
+              skillNames={skillNames}
+            />
+            <GroupedInsightPanel
+              groupBy={groupBy}
+              insights={result?.groupedInsights ?? []}
+            />
+          </section>
+        </>
+      ) : null}
     </>
   )
 }

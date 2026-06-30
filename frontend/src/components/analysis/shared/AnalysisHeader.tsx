@@ -11,11 +11,13 @@ function AnalysisHeader({ eyebrow, metaItems, title = 'Analysis' }: AnalysisHead
         <h1>{title}</h1>
         <span className="analysis-eyebrow">{eyebrow}</span>
       </div>
-      <div className="analysis-header-meta" aria-label="Current setup">
-        {metaItems.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </div>
+      {metaItems.length > 0 ? (
+        <div className="analysis-header-meta" aria-label="Current setup">
+          {metaItems.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+      ) : null}
     </header>
   )
 }
