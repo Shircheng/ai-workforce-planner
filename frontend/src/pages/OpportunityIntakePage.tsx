@@ -70,6 +70,7 @@ function OpportunityIntakePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false)
   const [recommendationOpportunityId, setRecommendationOpportunityId] = useState<string | null>(null)
+  const [shouldGenerateOnRecommendationPage, setShouldGenerateOnRecommendationPage] = useState(false)
   const pageTopRef = useRef<HTMLDivElement>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -88,8 +89,10 @@ function OpportunityIntakePage() {
   useEffect(() => {
     if (!recommendationOpportunityId || !isInputSaved) return
 
-    navigate(`/opportunities/${encodeURIComponent(recommendationOpportunityId)}/recommendations`)
-  }, [isInputSaved, navigate, recommendationOpportunityId])
+    navigate(`/opportunities/${encodeURIComponent(recommendationOpportunityId)}/recommendations`, {
+      state: { generateRecommendations: shouldGenerateOnRecommendationPage },
+    })
+  }, [isInputSaved, navigate, recommendationOpportunityId, shouldGenerateOnRecommendationPage])
 
   useEffect(() => {
     if (!isGenerateConfirmOpen || isGenerating) return
@@ -209,13 +212,15 @@ function OpportunityIntakePage() {
     setError(null)
     try {
       const storedResult = await opportunityApi.generateOptionsForRecommender(result)
+      const opportunityId = storedResult.opportunity.opportunityId
       setResult(storedResult)
       setIsInputSaved(true)
       setIsGenerateConfirmOpen(false)
-      setRecommendationOpportunityId(storedResult.opportunity.opportunityId)
+      setShouldGenerateOnRecommendationPage(true)
+      setRecommendationOpportunityId(opportunityId)
     } catch (caughtError) {
       setIsGenerateConfirmOpen(false)
-      setError(caughtError instanceof Error ? caughtError.message : 'Unable to store opportunity for recommender.')
+      setError(caughtError instanceof Error ? caughtError.message : 'Unable to generate recommendation options.')
       window.requestAnimationFrame(scrollToPageTop)
     } finally {
       setIsGenerating(false)
@@ -257,14 +262,14 @@ function OpportunityIntakePage() {
               <h2 id="generate-confirm-title">Generate options?</h2>
             </div>
             <p id="generate-confirm-description">
-              This will save the opportunity and parsed roles, then open the recommendation page for this opportunity.
+              This will save the opportunity and parsed roles, generate recommendation options, then open the recommendation page for this opportunity.
             </p>
             <div className="confirm-dialog-actions">
               <button className="secondary-button" type="button" onClick={closeGenerateConfirm} disabled={isGenerating}>
                 Cancel
               </button>
               <button className="primary-button" type="button" onClick={confirmGenerateOptions} disabled={isGenerating}>
-                {isGenerating ? 'Saving...' : 'Confirm and continue'}
+                {isGenerating ? 'Generating...' : 'Generate and continue'}
               </button>
             </div>
           </section>

@@ -309,7 +309,7 @@ function ParsedRequirementPanel({ result, error, isGenerating, isParsing, onGene
             title={generateBlockedMessage || undefined}
             aria-describedby={generateBlockedMessage ? 'generate-options-blocked-message' : undefined}
           >
-            {isGenerating ? 'Saving...' : 'Generate options for recommender'}
+            {isGenerating ? 'Generating...' : 'Generate options for recommender'}
           </button>
           {generateBlockedMessage && (
             <p className="generate-blocked-message" id="generate-options-blocked-message">{generateBlockedMessage}</p>
