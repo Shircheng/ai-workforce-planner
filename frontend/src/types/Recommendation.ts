@@ -48,7 +48,6 @@ export type MemberExplanation = {
   reasoningBullets?: string[]
   riskSummary?: string
   nextActions?: string[]
-  ewaSummary?: string
 }
 
 export type OptionExplanation = {
@@ -59,7 +58,6 @@ export type OptionExplanation = {
   reasoningBullets?: string[]
   riskSummary?: string
   nextActions?: string[]
-  ewaSummary?: string
   members?: MemberExplanation[]
 }
 

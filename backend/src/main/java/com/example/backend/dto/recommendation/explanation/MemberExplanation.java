@@ -20,5 +20,4 @@ public class MemberExplanation {
     private List<String> reasoningBullets;
     private String riskSummary;
     private List<String> nextActions;
-    private String ewaSummary;
 }

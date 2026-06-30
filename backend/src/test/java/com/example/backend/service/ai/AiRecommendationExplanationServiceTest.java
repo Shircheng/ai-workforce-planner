@@ -135,7 +135,6 @@ class AiRecommendationExplanationServiceTest {
                       "reasoningBullets": ["Selected by backend scoring.", "Covers core Java evidence."],
                       "riskSummary": "Kafka gap and partial availability remain.",
                       "nextActions": ["Mitigate Kafka gap.", "Complete EWA approval."],
-                      "ewaSummary": "EWA remains required before booking.",
                       "members": [
                         {
                           "employeeId": "EMP-1",
@@ -143,8 +142,7 @@ class AiRecommendationExplanationServiceTest {
                           "recommendationNote": "Alex is suitable for the architect role.",
                           "reasoningBullets": ["Strong Java and MongoDB evidence."],
                           "riskSummary": "Kafka is missing.",
-                          "nextActions": ["Pair with Kafka specialist."],
-                          "ewaSummary": "EWA approval remains pending."
+                          "nextActions": ["Pair with Kafka specialist."]
                         }
                       ]
                     }
