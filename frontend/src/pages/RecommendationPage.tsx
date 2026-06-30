@@ -17,6 +17,7 @@ import type { ReactNode, RefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { recommendationApi } from '../api/recommendationApi'
+import './RecommandationPage.css'
 import type { Opportunity } from '../types/Opportunity'
 import type { OpportunityRole } from '../types/OpportunityRoles'
 import type {
@@ -173,6 +174,7 @@ function RecommendationPage() {
     [options, selectedOptionType],
   )
 
+  const hasExplanation = Boolean(explanation?.explanations)
   const roleCount = roles.length
   const totalFte = roles.reduce(
     (sum, role) => sum + (toNumber(role.fteRequired) ?? 0),
@@ -299,19 +301,6 @@ function RecommendationPage() {
             Compare Teams
           </button>
           <button
-            className="secondary-button ai-button"
-            disabled={!recommendationRun || isExplaining}
-            onClick={handleGenerateExplanation}
-            type="button"
-          >
-            {isExplaining ? (
-              <Loader2 className="spin" size={16} />
-            ) : (
-              <Sparkles size={16} />
-            )}
-            Generate AI Explanation
-          </button>
-          <button
             className="primary-button"
             disabled={!selectedOption || isPreparingEwa}
             onClick={handlePrepareEwaPack}
@@ -355,19 +344,6 @@ function RecommendationPage() {
               <strong>{recommendationRun.recommendationRunId}</strong>
               <span>{formatDateTime(recommendationRun.generatedAt)}</span>
             </div>
-            <button
-              className="secondary-button"
-              disabled={isGenerating}
-              onClick={handleGenerateRecommendations}
-              type="button"
-            >
-              {isGenerating ? (
-                <Loader2 className="spin" size={16} />
-              ) : (
-                <Database size={16} />
-              )}
-              Regenerate
-            </button>
           </div>
 
           {explanation?.explanations?.runSummary ? (
@@ -377,6 +353,30 @@ function RecommendationPage() {
                 <strong>AI run summary</strong>
                 <p>{explanation.explanations.runSummary}</p>
               </div>
+            </div>
+          ) : !hasExplanation ? (
+            <div className="ai-explanation-empty">
+              <Sparkles size={18} />
+              <div>
+                <strong>AI explanation not generated yet.</strong>
+                <p>
+                  Generate a concise explanation from this stored recommendation
+                  run. The backend scoring and ranking will not change.
+                </p>
+              </div>
+              <button
+                className="secondary-button ai-inline-button"
+                disabled={isExplaining}
+                onClick={handleGenerateExplanation}
+                type="button"
+              >
+                {isExplaining ? (
+                  <Loader2 className="spin" size={16} />
+                ) : (
+                  <Sparkles size={16} />
+                )}
+                Generate AI Explanation
+              </button>
             </div>
           ) : null}
 
@@ -699,44 +699,108 @@ function TeamComparisonTable({
 }) {
   const rows = [
     {
+      description: 'Backend confidence for this option.',
+      icon: <Database size={15} />,
       label: 'Overall score / confidence',
-      value: (option: RecommendationOption) =>
-        `${formatScore(toNumber(option.confidenceScore))} /100`,
+      render: (option: RecommendationOption) => (
+        <ComparisonMetric
+          label="Confidence"
+          tone={scoreTone(toNumber(option.confidenceScore), false)}
+          value={`${formatScore(toNumber(option.confidenceScore))}/100`}
+        />
+      ),
     },
     {
+      description: 'Risk signal returned by the recommendation run.',
+      icon: <ShieldCheck size={15} />,
       label: 'Risk level',
-      value: (option: RecommendationOption) => option.riskLevel ?? notAvailable,
+      render: (option: RecommendationOption) => (
+        <div className="comparison-stack">
+          <RiskBadge riskLevel={option.riskLevel} />
+          <span className="comparison-muted">
+            Risk score {formatScore(toNumber(option.riskScore))}
+          </span>
+        </div>
+      ),
     },
     {
+      description: 'How soon the team can be ready.',
+      icon: <Clock3 size={15} />,
       label: 'Readiness days',
-      value: (option: RecommendationOption) => readinessText(option),
+      render: (option: RecommendationOption) => (
+        <ComparisonMetric
+          label="Readiness"
+          tone={option.readinessDays === 0 ? 'strong' : 'medium'}
+          value={readinessText(option)}
+        />
+      ),
     },
     {
+      description: 'Evidence from member rationale fields.',
+      icon: <Layers3 size={15} />,
       label: 'Skill coverage',
-      value: (option: RecommendationOption) => memberRationaleText(option),
+      render: (option: RecommendationOption) => <SkillCoverageList option={option} />,
     },
     {
+      description: 'Member availability and start readiness.',
+      icon: <CalendarDays size={15} />,
       label: 'Availability readiness',
-      value: (option: RecommendationOption) => optionAvailabilityText(option),
+      render: (option: RecommendationOption) => (
+        <ComparisonBulletList
+          emptyText={notAvailable}
+          items={optionAvailabilityItems(option)}
+        />
+      ),
     },
     {
+      description: 'Summed FTE gap across selected members.',
+      icon: <Users size={15} />,
       label: 'FTE gap',
-      value: (option: RecommendationOption) => formatNumber(optionFteGap(option)),
+      render: (option: RecommendationOption) => {
+        const gap = optionFteGap(option)
+        return (
+          <ComparisonMetric
+            label={gap > 0 ? 'Gap to resolve' : 'No gap'}
+            tone={gap > 0 ? 'warn' : 'strong'}
+            value={formatNumber(gap)}
+          />
+        )
+      },
     },
     {
+      description: 'Known gaps and constraints from backend output.',
+      icon: <ShieldCheck size={15} />,
       label: 'Key risks',
-      value: (option: RecommendationOption) => risksText(option),
+      render: (option: RecommendationOption) => (
+        <ComparisonBulletList
+          emptyText="No risks supplied."
+          items={riskItems(option)}
+          tone="risk"
+        />
+      ),
     },
     {
+      description: 'Generated only by the AI explanation endpoint.',
+      icon: <Sparkles size={15} />,
       label: 'AI next actions',
-      value: (option: RecommendationOption) =>
-        nextActionsText(findOptionExplanation(explanation, option)),
+      render: (option: RecommendationOption) => (
+        <ComparisonBulletList
+          emptyText="Generate AI explanation for next actions."
+          items={nextActionItems(findOptionExplanation(explanation, option))}
+          tone="action"
+        />
+      ),
     },
     {
+      description: 'EWA remains the final approval and booking process.',
+      icon: <FileCheck2 size={15} />,
       label: 'EWA readiness',
-      value: (option: RecommendationOption) =>
-        findOptionExplanation(explanation, option)?.ewaSummary ??
-        'EWA remains the final approval and booking process.',
+      render: (option: RecommendationOption) => (
+        <div className="comparison-ewa-note">
+          {findOptionExplanation(explanation, option)?.ewaSummary ??
+            'EWA remains the final approval and booking process.'}
+        </div>
+      ),
     },
   ]
 
@@ -756,7 +820,7 @@ function TeamComparisonTable({
               <th>Criteria</th>
               {options.map((option, index) => (
                 <th key={option.optionType ?? index}>
-                  {optionConfig(option, index).label}
+                  <ComparisonOptionHeader option={option} optionIndex={index} />
                 </th>
               ))}
             </tr>
@@ -764,10 +828,18 @@ function TeamComparisonTable({
           <tbody>
             {rows.map((row) => (
               <tr key={row.label}>
-                <td>{row.label}</td>
+                <td>
+                  <div className="comparison-criteria">
+                    <span className="comparison-criteria-icon">{row.icon}</span>
+                    <span>
+                      <strong>{row.label}</strong>
+                      <small>{row.description}</small>
+                    </span>
+                  </div>
+                </td>
                 {options.map((option, index) => (
                   <td key={`${row.label}-${option.optionType ?? index}`}>
-                    {row.value(option)}
+                    {row.render(option)}
                   </td>
                 ))}
               </tr>
@@ -776,6 +848,110 @@ function TeamComparisonTable({
         </table>
       </div>
     </div>
+  )
+}
+
+function ComparisonOptionHeader({
+  option,
+  optionIndex,
+}: {
+  option: RecommendationOption
+  optionIndex: number
+}) {
+  const config = optionConfig(option, optionIndex)
+  const members = option.selectedMemberCount ?? option.members?.length ?? 0
+
+  return (
+    <div className={`comparison-option-head accent-${config.accent}`}>
+      <span>{config.shortLabel}</span>
+      <strong>{config.label.replace(`${config.shortLabel}: `, '')}</strong>
+      <div className="comparison-head-meta">
+        <span>{members} members</span>
+        <span>{readinessText(option)}</span>
+      </div>
+    </div>
+  )
+}
+
+function ComparisonMetric({
+  label,
+  tone,
+  value,
+}: {
+  label: string
+  tone: string
+  value: string
+}) {
+  return (
+    <div className={`comparison-metric ${tone}`}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function SkillCoverageList({ option }: { option: RecommendationOption }) {
+  const members = (option.members ?? []).slice(0, 4)
+
+  if (!members.length) {
+    return <span className="comparison-muted">No skill rationale supplied.</span>
+  }
+
+  return (
+    <div className="comparison-skill-list">
+      {members.map((member, index) => {
+        const scorePills = memberSkillScorePills(member)
+
+        return (
+          <div
+            className="comparison-skill-card"
+            key={`${member.employeeId ?? 'member'}-${member.opportunityRoleId ?? index}`}
+          >
+            <strong>
+              {member.employeeName ?? 'Member'} - {member.roleName ?? 'Role'}
+            </strong>
+            <div className="comparison-skill-lines">
+              {memberSkillEvidenceLines(member).map((line, lineIndex) => (
+                <span key={`${line}-${lineIndex}`}>{line}</span>
+              ))}
+            </div>
+            {scorePills.length ? (
+              <div className="comparison-skill-scores">
+                {scorePills.map((score) => (
+                  <span key={score.label}>
+                    {score.label} {score.value}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ComparisonBulletList({
+  emptyText,
+  items,
+  tone = 'default',
+}: {
+  emptyText: string
+  items: string[]
+  tone?: 'default' | 'risk' | 'action'
+}) {
+  const visibleItems = items.filter(Boolean).slice(0, 4)
+
+  if (!visibleItems.length) {
+    return <span className="comparison-muted">{emptyText}</span>
+  }
+
+  return (
+    <ul className={`comparison-detail-list ${tone}`}>
+      {visibleItems.map((item, index) => (
+        <li key={`${item}-${index}`}>{item}</li>
+      ))}
+    </ul>
   )
 }
 
@@ -1105,37 +1281,80 @@ function availabilityText(member: RecommendationRunMember) {
     : formatNumber(toNumber(member.availableFteAtStart))
 }
 
-function optionAvailabilityText(option: RecommendationOption) {
+function optionAvailabilityItems(option: RecommendationOption) {
   const members = option.members ?? []
   if (!members.length) {
-    return notAvailable
+    return []
   }
 
   return members
     .map(
       (member) =>
-        `${member.employeeName ?? 'Member'}: ${availabilityText(member)}`,
+        `${member.employeeName ?? 'Member'}: ${availabilityText(member)} availability, ${formatNumber(
+          toNumber(member.availableFteAtStart),
+        )} FTE at start`,
     )
-    .slice(0, 3)
-    .join('; ')
+    .slice(0, 4)
 }
 
-function memberRationaleText(option: RecommendationOption) {
-  const rationales = (option.members ?? [])
-    .map((member) => member.rationale)
-    .filter(Boolean)
+function memberSkillEvidenceLines(member: RecommendationRunMember) {
+  const rationaleLines = splitEvidenceLines(member.rationale)
+  if (rationaleLines.length) {
+    return rationaleLines
+  }
 
-  return rationales.length ? rationales.slice(0, 2).join(' | ') : notAvailable
+  const fallbackLines = [
+    member.fitStatus ? `Fit status: ${member.fitStatus}` : null,
+    `${formatNumber(toNumber(member.availableFteAtStart))} FTE available at start`,
+    `FTE gap: ${formatNumber(toNumber(member.fteGap))}`,
+  ]
+
+  return fallbackLines.filter((line): line is string => Boolean(line))
+}
+
+function splitEvidenceLines(value?: string) {
+  if (!value?.trim()) {
+    return []
+  }
+
+  return value
+    .split(';')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter((line) => Boolean(line) && !isScoreOnlyEvidenceLine(line))
+}
+
+function isScoreOnlyEvidenceLine(value: string) {
+  return /^(capability|availability|overall)(?:\s+(?:score|fit))?\s*[:=-]?\s*\d+(?:\.\d+)?\.?$/i.test(
+    value,
+  )
+}
+
+function memberSkillScorePills(member: RecommendationRunMember) {
+  return [
+    {
+      label: 'Capability',
+      value: toNumber(member.capabilityFitScore ?? member.matchScore),
+    },
+    { label: 'Availability', value: toNumber(member.availabilityFitScore) },
+    { label: 'Overall', value: toNumber(member.overallStaffingScore) },
+  ]
+    .filter((score) => score.value !== null)
+    .map((score) => ({
+      label: score.label,
+      value: formatScore(score.value),
+    }))
 }
 
 function risksText(option: RecommendationOption) {
   return option.risks?.length ? option.risks.join('; ') : 'No risks supplied.'
 }
 
-function nextActionsText(explanation?: OptionExplanation) {
-  return explanation?.nextActions?.length
-    ? explanation.nextActions.join('; ')
-    : 'Generate AI explanation for next actions.'
+function riskItems(option: RecommendationOption) {
+  return option.risks?.filter(Boolean).slice(0, 4) ?? []
+}
+
+function nextActionItems(explanation?: OptionExplanation) {
+  return explanation?.nextActions?.filter(Boolean).slice(0, 4) ?? []
 }
 
 function optionFteGap(option: RecommendationOption) {

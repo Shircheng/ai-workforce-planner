@@ -15,30 +15,23 @@ import org.springframework.web.bind.annotation.RestController;
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 public class RecommendationExplanationController {
 
-    private final AiRecommendationExplanationService explanationService;
+  private final AiRecommendationExplanationService explanationService;
 
-    public RecommendationExplanationController(AiRecommendationExplanationService explanationService) {
-        this.explanationService = explanationService;
-    }
+  public RecommendationExplanationController(
+      AiRecommendationExplanationService explanationService) {
+    this.explanationService = explanationService;
+  }
 
-    @PostMapping({
-            "/recommendations/{recommendationRunId}/explanations/generate",
-            "/recommendation-runs/{recommendationRunId}/explanations/generate"
-    })
-    public RecommendationExplanationResponse generateRecommendationExplanations(
-            @PathVariable String recommendationRunId,
-            @RequestParam(defaultValue = "false") boolean forceRegenerate
-    ) {
-        return explanationService.generateExplanations(recommendationRunId, forceRegenerate);
-    }
+  @PostMapping({"/recommendation-runs/{recommendationRunId}/explanations/generate"})
+  public RecommendationExplanationResponse generateRecommendationExplanations(
+      @PathVariable String recommendationRunId,
+      @RequestParam(defaultValue = "false") boolean forceRegenerate) {
+    return explanationService.generateExplanations(recommendationRunId, forceRegenerate);
+  }
 
-    @GetMapping({
-            "/recommendations/{recommendationRunId}/explanations",
-            "/recommendation-runs/{recommendationRunId}/explanations"
-    })
-    public RecommendationExplanationResponse getRecommendationExplanations(
-            @PathVariable String recommendationRunId
-    ) {
-        return explanationService.getExplanations(recommendationRunId);
-    }
+  @GetMapping({"/recommendation-runs/{recommendationRunId}/explanations"})
+  public RecommendationExplanationResponse getRecommendationExplanations(
+      @PathVariable String recommendationRunId) {
+    return explanationService.getExplanations(recommendationRunId);
+  }
 }
