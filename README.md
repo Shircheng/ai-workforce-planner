@@ -6,6 +6,8 @@ The application helps workforce planners, sales leaders, and delivery leaders ex
 
 The goal is not to replace human judgement. The goal is to bring together workforce data, opportunity requirements, availability, skills, project history, and recommendation reasoning so staffing decisions can be made faster and with more confidence.
 
+For local setup with Rancher Desktop and Docker Compose, see [SETUP.md](SETUP.md).
+
 ---
 
 ## Table of Contents
@@ -232,8 +234,8 @@ These are configured in `backend/src/main/resources/application.properties` and 
 | `app.import.employee-dataset` | `classpath:data/workforce-dataset.xlsx` | Default Excel dataset location. |
 | `app.import.employee-dataset-on-startup` | `true` | Dataset startup import flag. |
 | `app.cors.allowed-origins` | `http://localhost:5173` | Allowed frontend origin for backend API calls. |
-| `openai.api-key` / `OPENAI_API_KEY` | empty when configured safely | OpenAI API key for opportunity parsing. Do not commit real keys. |
-| `openai.model` / `OPENAI_MODEL` | project configured model | OpenAI model used by opportunity parsing. |
+| `openai.api-key` / `OPENAI_API_KEY` | empty; configure locally in `.env` | OpenAI API key for opportunity parsing and recommendation explanations. Do not commit real keys. |
+| `openai.model` / `OPENAI_MODEL` | `gpt-5.4-mini` | OpenAI model used by opportunity parsing and recommendation explanations. |
 
 Note: Dataset import is explicit. Employee GET APIs do not auto-import data.
 
@@ -337,20 +339,6 @@ Shows:
 - Current allocation
 - Project history
 - Domain experience
-
-#### Recommendation Context Mode
-
-Opened from the Recommendation page.
-
-Shows everything in Basic Profile Mode, plus opportunity-specific recommendation notes:
-
-- Why this person was recommended
-- Matched skills
-- Missing skills
-- Availability fit
-- Domain/project relevance
-- Risks
-- Suggested next actions
 
 ---
 
@@ -655,6 +643,7 @@ http://127.0.0.1:8000
 | GET | `/health` | Check whether the Python analytics service is running |
 | GET | `/analysis/filter-options` | Return dynamic filter dropdown values from MongoDB distinct values |
 | POST | `/analysis/skill-gap` | Analyze required skill coverage, fit percentage, priority gaps, and ready candidates |
+| POST | `/analysis/skill-gaps` | Alias for `/analysis/skill-gap` |
 | POST | `/analysis/workforce-forecast` | Analyze workforce availability across 30, 60, and 90 days |
 | POST | `/analysis/opportunity-forecast` | Analyze opportunity demand, probability-weighted FTE, workload, and skill demand |
 | POST | `/analysis/ewa-summary` | Summarize EWA request status and booking evidence |
@@ -672,14 +661,23 @@ http://localhost:8080/api
 | POST | `/import/workforce-dataset` | Import the default workforce dataset from backend resources into MongoDB |
 | POST | `/import/workforce-dataset/upload` | Upload and import a workforce Excel file |
 | GET | `/employees` | Search and filter employees |
+| GET | `/employees/dashboard` | Return Workforce Dashboard summary metrics and breakdowns |
 | GET | `/employees/{employeeId}` | Fetch one employee by employee ID |
 | GET | `/employees/filter-options` | Return filter options for Talent Explorer |
 | GET | `/employees/{employeeId}/profile` | Fetch employee profile details |
 | POST | `/opportunities/parse` | Parse and validate an opportunity intake request. This returns a preview and does not save the opportunity. |
-| POST | `/opportunities/generate-options` | Save the parsed opportunity and opportunity roles, then provide recommendation. |
+| POST | `/opportunities/generate-options` | Save the parsed opportunity and opportunity roles for recommender generation. This does not calculate recommendations. |
 | GET | `/opportunities/{opportunityId}` | Fetch one opportunity by opportunity ID |
+| GET | `/opportunities/{opportunityId}/roles` | Fetch all roles for one opportunity |
+| POST | `/opportunities/{opportunityId}/recommendations/generate` | Generate recommendation options for an opportunity and save a new recommendation run |
+| GET | `/opportunities/{opportunityId}/recommendations/latest` | Fetch the latest saved recommendation run for an opportunity |
 | GET | `/opportunity-roles/{opportunityRoleId}` | Fetch one opportunity role by role ID |
+| GET | `/opportunity-overlays/lookup` | Fetch the best overlay for a specific `opportunityId`, `opportunityRoleId`, and `employeeId` query combination |
 | GET | `/opportunity-overlays/{overlayId}` | Fetch one opportunity overlay by overlay ID |
+| GET | `/recommendation-runs/{recommendationRunId}` | Fetch one saved recommendation run |
+| PATCH | `/recommendation-runs/{recommendationRunId}/explanation` | Update recommendation run AI explanation status/content |
+| POST | `/recommendation-runs/{recommendationRunId}/explanations/generate` | Generate AI explanations for a recommendation run. Supports `forceRegenerate` query parameter. |
+| GET | `/recommendation-runs/{recommendationRunId}/explanations` | Fetch AI explanations for a recommendation run |
 | POST | `/ewa-requests/submit` | Create new EWA request records for selected candidates |
 
 Dataset import is only triggered through the import endpoints. Employee GET endpoints return the data currently stored in MongoDB.

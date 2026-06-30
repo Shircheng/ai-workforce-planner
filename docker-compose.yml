@@ -18,6 +18,8 @@ services:
       - "8080:8080"
     environment:
       SPRING_MONGODB_URI: mongodb://mongodb:27017/ai-workforce-planner
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini}
     depends_on:
       mongodb:
         condition: service_healthy
