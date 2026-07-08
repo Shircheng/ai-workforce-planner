@@ -683,3 +683,10 @@ http://localhost:8080/api
 Dataset import is only triggered through the import endpoints. Employee GET endpoints return the data currently stored in MongoDB.
 
 Frontend development may call Spring Boot through the Vite `/api` proxy. The analysis page calls the Python analytics service for insight and visualization data.
+
+Contributions:
+- Ng Shir Cheng
+- Cheong Man Hei
+- Foong Qin Jie
+- Tan Jian Quan
+- Tay Tem Hoe
