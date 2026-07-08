@@ -686,7 +686,7 @@ Frontend development may call Spring Boot through the Vite `/api` proxy. The ana
 
 Contributions:
 - Ng Shir Cheng
-- Cheong Man Hei
+- Cheong Man Hei 
 - Foong Qin Jie 
 - Tan Jian Quan
 - Tay Tem Hoe
