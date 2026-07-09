@@ -632,6 +632,8 @@ Dataset import is only triggered through the import endpoints. Employee GET endp
 
 Frontend development may call Spring Boot through the Vite `/api` proxy. The analysis page calls the Python analytics service for insight and visualization data.
 
+Demo Video: https://youtu.be/U0-57xfGTqE
+
 Contributions:
 - Ng Shir Cheng
 - Cheong Man Hei 
